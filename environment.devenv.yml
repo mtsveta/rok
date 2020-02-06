@@ -3,6 +3,14 @@ channels:
   - conda-forge
 dependencies:
   - reaktoro
+  - python=3.7
+  - pytest
+  - pytest-regressions
+  - numpy
+  - pandas
+  - gstools
+  - pre-commit
+  - black
 
 environment:
   PYTHONPATH:
