@@ -3,7 +3,6 @@ from .transport import TransportSolver
 import firedrake as fire
 import reaktoro as rkt
 import numpy as np
-import numpy
 import time as timer
 
 
@@ -30,8 +29,20 @@ class ChemicalDirichletBC:
 
 
 class ChemicalTransportResult(object):
+
     class EquilibriumResult(object):
         def __init__(self):
+            # The number of iterations for equilibrium calculations performed at every degree of freedom
+            self.iterations = []
+
+            # The elapsed seconds for equilibrium calculations performed at every degree of freedom
+            self.seconds = []
+
+    class SmartEquilibriumResult(object):
+        def __init__(self):
+            # The number of iterations for equilibrium calculations performed at every degree of freedom
+            self.smart_preditions = []
+
             # The number of iterations for equilibrium calculations performed at every degree of freedom
             self.iterations = []
 
@@ -63,10 +74,26 @@ class ChemicalTransportResult(object):
         self.seconds_linear_systems = 0
 
         # The result of the equilibrium calculations
+        self.smart_equilibrium = ChemicalTransportResult.SmartEquilibriumResult()
+
+        # The result of the equilibrium calculations
         self.equilibrium = ChemicalTransportResult.EquilibriumResult()
 
         # The result of the kinetic calculations
         self.kinetics = ChemicalTransportResult.KineticsResult()
+
+
+class ChemicalTransportOptions(object):
+    def __init__(self):
+        self.use_smart_equilibrium = False
+        self.equilibrium = []
+        self.smart_equilibrium = []
+
+    def setSmartEquilibriumOptions(self, options):
+        self.smart_equilibrium = options
+
+    def setEquilibriumOptions(self, options):
+        self.equilibrium = options
 
 
 class ChemicalTransportSolver(object):
@@ -83,6 +110,7 @@ class ChemicalTransportSolver(object):
         self.source = [fire.Constant(0.0) for i in range(self.num_fluid_phases)]
         self.boundary_conditions = []
         self.initialized = False
+        self.options = ChemicalTransportOptions()
 
         # Initialize the function space used in the ChemicalField instance
         self.function_space = field.functionSpace()
@@ -92,13 +120,23 @@ class ChemicalTransportSolver(object):
 
         # Initialize the ChemicalTransportResult instance
         self.result = ChemicalTransportResult()
+
         self.result.equilibrium.iterations = fire.Function(self.function_space)
         self.result.equilibrium.seconds = fire.Function(self.function_space)
+
+        self.result.smart_equilibrium.iterations = fire.Function(self.function_space)
+        self.result.smart_equilibrium.seconds = fire.Function(self.function_space)
+        self.result.smart_equilibrium.smart_preditions = fire.Function(self.function_space)
+
         self.result.kinetics.timesteps = fire.Function(self.function_space)
         self.result.kinetics.seconds = fire.Function(self.function_space)
 
+        # TODO: why is this repetition?
         self.result.equilibrium._iterations = np.empty(self.num_dofs)
         self.result.equilibrium._seconds = np.empty(self.num_dofs)
+        self.result.smart_equilibrium._iterations = np.empty(self.num_dofs)
+        self.result.smart_equilibrium._seconds = np.empty(self.num_dofs)
+        self.result.smart_equilibrium._smart_preditions = np.empty(self.num_dofs)
         self.result.kinetics._timesteps = np.empty(self.num_dofs)
         self.result.kinetics._seconds = np.empty(self.num_dofs)
 
@@ -110,6 +148,11 @@ class ChemicalTransportSolver(object):
         )
         self.result.kinetics.timesteps.rename("KineticsTimeStepsPerDOF", "KineticsTimeStepsPerDOF")
         self.result.kinetics.seconds.rename("KineticsSecondsPerDOF", "KineticsSecondsPerDOF")
+
+    def setOptions(self, transport_options):
+        self.options.use_smart_equilibrium = transport_options.use_smart_equilbrium
+        self.options.setEquilibriumOptions(transport_options.equilibrium)
+        self.options.setSmartEquilibriumOptions(transport_options.smart_equilibrium)
 
     def setVelocity(self, velocity):
         assert type(velocity) is list, "Expecting a list of velocity fields for each fluid phase."
@@ -188,9 +231,14 @@ class ChemicalTransportSolver(object):
         # The auxiliary Function instance used for outputting
         self.output = fire.Function(self.function_space)
 
-        # Initialize the chemical equilibrium solver
-        self.equilibrium = rkt.EquilibriumSolver(self.system)
-        self.equilibrium.setPartition(self.partition)
+        if self.options.use_smart_equilibrium:
+            # Initialize the chemical equilibrium solver
+            self.equilibrium = rkt.SmartEquilibriumSolver(self.system)
+            self.equilibrium.setPartition(self.partition)
+        else:
+            # Initialize the chemical equilibrium solver
+            self.equilibrium = rkt.EquilibriumSolver(self.system)
+            self.equilibrium.setPartition(self.partition)
 
         # Initialize the indices of the equilibrium and kinetic species
         self.ispecies_e = self.partition.indicesEquilibriumSpecies()
@@ -300,6 +348,7 @@ class ChemicalTransportSolver(object):
         states = field.states()
         iterations = self.result.equilibrium._iterations
         seconds = self.result.equilibrium._seconds
+        smart_predictions = self.result.smart_equilibrium._smart_preditions
 
         # Calculate the element amounts in the equilibrium partition.
         # Compute the contribution from the equilibrium-solid partition
@@ -341,7 +390,9 @@ class ChemicalTransportSolver(object):
 
             # Store the statistics of the equilibrium calculation
             iterations[k] = result.optimum.iterations
-            seconds[k] = result.optimum.time
+            seconds[k] = result.timing.solve
+            if self.options.use_smart_equilibrium:
+                smart_predictions[k] = result.estimate.accepted
 
         # Update the element amounts in the fluid phases of the equilibrium-fluid partition
         for i in range(self.num_fluid_phases):
@@ -363,7 +414,7 @@ class ChemicalTransportSolver(object):
         if not self.initialized:
             self.initialize(field)
 
-        # Start timing the transport step calculation
+        # Start timing the chemical transport step calculation
         tbegin = timer.time()
 
         # Transport the elements in the equilibrium-fluid partition
@@ -371,6 +422,10 @@ class ChemicalTransportSolver(object):
 
         # Transport the species in the kinetic-fluid partition
         self.transportKineticSpeciesInFluidPhases(field, dt)
+
+        # Stop timing the transport time of the reactive transport
+        self.result.seconds = timer.time() - tbegin
+
 
         # Equilibrate the equilibrium-solid and equilibrium-fluid partitions
         self.equilibrate(field)
