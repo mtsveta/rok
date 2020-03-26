@@ -44,12 +44,15 @@ rok.File(resultsdir + "flow.pvd").write(flow.u, flow.p, k)
 
 rok.plot(k)
 plt.axis("off")
+plt.title("Permiability, k")
 plt.show()
 
 rok.plot(flow.u)
 plt.axis("off")
+plt.title("Velocity, u")
 plt.show()
 
 rok.plot(flow.p)
+plt.title("Pressure, p")
 plt.axis("off")
 plt.show()
