@@ -1,0 +1,1 @@
+from .plotting import plot_computing_costs_mpl, plot_on_demand_learning_countings_mpl, plot_speedups_mpl
