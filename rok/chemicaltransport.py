@@ -121,12 +121,13 @@ class ChemicalTransportSolver(object):
         # Initialize the ChemicalTransportResult instance
         self.result = ChemicalTransportResult()
 
+        # TODO: why all these fields are firedrake functions
         self.result.equilibrium.iterations = fire.Function(self.function_space)
         self.result.equilibrium.seconds = fire.Function(self.function_space)
 
         self.result.smart_equilibrium.iterations = fire.Function(self.function_space)
         self.result.smart_equilibrium.seconds = fire.Function(self.function_space)
-        self.result.smart_equilibrium.smart_preditions = fire.Function(self.function_space)
+        self.result.smart_equilibrium.smart_predictions = fire.Function(self.function_space)
 
         self.result.kinetics.timesteps = fire.Function(self.function_space)
         self.result.kinetics.seconds = fire.Function(self.function_space)
@@ -150,7 +151,7 @@ class ChemicalTransportSolver(object):
         self.result.kinetics.seconds.rename("KineticsSecondsPerDOF", "KineticsSecondsPerDOF")
 
     def setOptions(self, transport_options):
-        self.options.use_smart_equilibrium = transport_options.use_smart_equilbrium
+        self.options.use_smart_equilibrium = transport_options.use_smart_equilibrium
         self.options.setEquilibriumOptions(transport_options.equilibrium)
         self.options.setSmartEquilibriumOptions(transport_options.smart_equilibrium)
 
@@ -233,12 +234,12 @@ class ChemicalTransportSolver(object):
 
         if self.options.use_smart_equilibrium:
             # Initialize the chemical equilibrium solver
-            self.equilibrium = rkt.SmartEquilibriumSolver(self.system)
-            self.equilibrium.setPartition(self.partition)
+            self.equilibrium = rkt.SmartEquilibriumSolver(self.partition)
+            #self.equilibrium.setPartition(self.partition)
         else:
             # Initialize the chemical equilibrium solver
-            self.equilibrium = rkt.EquilibriumSolver(self.system)
-            self.equilibrium.setPartition(self.partition)
+            self.equilibrium = rkt.EquilibriumSolver(self.partition)
+            #self.equilibrium.setPartition(self.partition)
 
         # Initialize the indices of the equilibrium and kinetic species
         self.ispecies_e = self.partition.indicesEquilibriumSpecies()
@@ -376,23 +377,38 @@ class ChemicalTransportSolver(object):
             # Perform the equilibrium calculation at current degree of freedom
             result = self.equilibrium.solve(states[k], T, P, self.be[:, k])
 
-            # Check if the equilibrium calculation was successful
-            if not result.optimum.succeeded:
-                b = [
-                    (elem.name(), amount)
-                    for elem, amount in zip(self.system.elements(), self.be[:, k])
-                ]
-                raise RuntimeError(
-                    "Failed to calculate equilibrium state at dof (%d), under "
-                    "temperature %f K, pressure %f Pa, and element molar amounts %s."
-                    % (k, states[k].temperature(), states[k].pressure(), str(b))
-                )
+            if self.options.use_smart_equilibrium:
+                # Check if the smart equilibrium calculation was successful
+                if not (result.learning.gibbs_energy_minimization.optimum.succeeded or result.estimate.accepted):
+                    b = [
+                        (elem.name(), amount)
+                        for elem, amount in zip(self.system.elements(), self.be[:, k])
+                    ]
+                    raise RuntimeError(
+                        "Failed to calculate equilibrium state at dof (%d), under "
+                        "temperature %f K, pressure %f Pa, and element molar amounts %s."
+                        % (k, states[k].temperature(), states[k].pressure(), str(b))
+                    )
+            else:
+                # Check if the equilibrium calculation was successful
+                if not result.optimum.succeeded:
+                    b = [
+                        (elem.name(), amount)
+                        for elem, amount in zip(self.system.elements(), self.be[:, k])
+                    ]
+                    raise RuntimeError(
+                        "Failed to calculate equilibrium state at dof (%d), under "
+                        "temperature %f K, pressure %f Pa, and element molar amounts %s."
+                        % (k, states[k].temperature(), states[k].pressure(), str(b))
+                    )
 
             # Store the statistics of the equilibrium calculation
-            iterations[k] = result.optimum.iterations
-            seconds[k] = result.timing.solve
             if self.options.use_smart_equilibrium:
                 smart_predictions[k] = result.estimate.accepted
+                iterations[k] = result.learning.gibbs_energy_minimization.optimum.iterations
+            else:
+                iterations[k] = result.optimum.iterations
+            seconds[k] = result.timing.solve
 
         # Update the element amounts in the fluid phases of the equilibrium-fluid partition
         for i in range(self.num_fluid_phases):
@@ -400,8 +416,13 @@ class ChemicalTransportSolver(object):
             self.bef[i] += bef_negative[i]
 
         # Extract the calculation statistics from the auxiliary ndarray members
-        self.result.equilibrium.iterations.vector()[:] = iterations
-        self.result.equilibrium.seconds.vector()[:] = seconds
+        if self.options.use_smart_equilibrium:
+            self.result.smart_equilibrium.iterations.vector()[:] = iterations
+            self.result.smart_equilibrium.seconds.vector()[:] = seconds
+            self.result.smart_equilibrium.smart_predictions.vector()[:] = smart_predictions
+        else:
+            self.result.equilibrium.iterations.vector()[:] = iterations
+            self.result.equilibrium.seconds.vector()[:] = seconds
 
         # Total time spent on performing equilibrium calculations
         self.result.seconds_equilibrium = timer.time() - tbegin
@@ -425,7 +446,6 @@ class ChemicalTransportSolver(object):
 
         # Stop timing the transport time of the reactive transport
         self.result.seconds = timer.time() - tbegin
-
 
         # Equilibrate the equilibrium-solid and equilibrium-fluid partitions
         self.equilibrate(field)

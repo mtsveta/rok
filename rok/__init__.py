@@ -7,7 +7,7 @@ del globals()[
 
 from .flow import DarcyProblem, DarcySolver
 from .transport import TransportSolver
-from .chemicaltransport import ChemicalDirichletBC, ChemicalTransportSolver
+from .chemicaltransport import ChemicalDirichletBC, ChemicalTransportSolver, ChemicalTransportOptions, ChemicalTransportResult
 from .chemicalfield import ChemicalField
 from .random_field import random_field_generator
 from .permeability import permeability

@@ -340,7 +340,7 @@ def simulate(use_smart_equilibrium_solver):
 
     bar.finish()
     if use_smart_equilibrium_solver:
-        solver.outputClusterInfo();
+        solver.outputClusterInfo()
 
 # Subsections below correspond to the methods responsible for each of the functional parts of `simulate()` method.
 #
@@ -493,7 +493,7 @@ def define_boundary_condition(system):
     problem_bc.setTemperature(T)
     problem_bc.setPressure(P)
     problem_bc.add('H2O', 1.0, 'kg')
-    problem_bc.add("O2", 1.0, "umol");
+    problem_bc.add("O2", 1.0, "umol")
     problem_bc.add('NaCl', 0.90, 'mol')
     problem_bc.add('MgCl2', 0.05, 'mol')
     problem_bc.add('CaCl2', 0.01, 'mol')
