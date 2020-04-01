@@ -27,13 +27,13 @@ def plot_computing_costs_mpl(time_steps, times, step, folder_results):
     (timings_equilibrium_conv, timings_equilibrium_smart, timings_transport) = times
 
     plt.xlabel('Time Step')
-    plt.ylabel('Computing Cost [μs]')
+    plt.ylabel('Computing Cost [s]')
     plt.xlim(left=0, right=len(time_steps))
     plt.yscale('log')
     plt.ticklabel_format(style='plain', axis='x')
-    plt.plot(time_steps[0:len(time_steps):step], timings_equilibrium_conv[0:len(time_steps):step] * 1e6, label="Chemical Equilibrium (Conventional)", color='C0', linewidth=1.5)
-    plt.plot(time_steps[0:len(time_steps):step], timings_equilibrium_smart[0:len(time_steps):step] * 1e6, label="Chemical Equilibrium (Smart)", color='C1', linewidth=1.5, alpha=1.0)
-    plt.plot(time_steps[0:len(time_steps):step], timings_transport[0:len(time_steps):step] * 1e6, label="Transport", color='C2', linewidth=1.5, alpha=1.0)
+    plt.plot(time_steps[0:len(time_steps):step], np.array(timings_equilibrium_conv[0:len(time_steps):step]), label="Chemical Equilibrium (Conventional)", color='C0', linewidth=1.5)
+    plt.plot(time_steps[0:len(time_steps):step], np.array(timings_equilibrium_smart[0:len(time_steps):step]), label="Chemical Equilibrium (Smart)", color='C1', linewidth=1.5, alpha=1.0)
+    plt.plot(time_steps[0:len(time_steps):step], np.array(timings_transport[0:len(time_steps):step]), label="Transport", color='C2', linewidth=1.5, alpha=1.0)
     leg = plt.legend(loc='right', bbox_to_anchor=(0.5, 0.3, 0.5, 0.5))
     for line in leg.get_lines(): line.set_linewidth(2.0)
     plt.tight_layout()
@@ -43,7 +43,7 @@ def plot_computing_costs_mpl(time_steps, times, step, folder_results):
 def plot_speedups_mpl(time_steps, times, step, folder_results):
 
     (timings_equilibrium_conv, timings_equilibrium_smart) = times
-    speedup = timings_equilibrium_conv / timings_equilibrium_smart
+    speedup = np.array(timings_equilibrium_conv) / np.array(timings_equilibrium_smart)
 
     plt.xlim(left=0, right=len(time_steps))
     plt.xlabel('Time Step')
