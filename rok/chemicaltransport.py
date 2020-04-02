@@ -86,14 +86,17 @@ class ChemicalTransportResult(object):
 class ChemicalTransportOptions(object):
     def __init__(self):
         self.use_smart_equilibrium = False
-        self.equilibrium = []
-        self.smart_equilibrium = []
+        self.equilibrium = rkt.EquilibriumOptions()
+        self.smart_equilibrium = rkt.SmartEquilibriumOptions()
 
     def setSmartEquilibriumOptions(self, options):
-        self.smart_equilibrium = options
+        self.smart_equilibrium.reltol = options.reltol
+        self.smart_equilibrium.mole_fraction_cutoff = options.mole_fraction_cutoff
+        self.smart_equilibrium.amount_fraction_cutoff = options.amount_fraction_cutoff
 
     def setEquilibriumOptions(self, options):
-        self.equilibrium = options
+        self.equilibrium.hessian = options.hessian
+        self.equilibrium.optimum.tolerance = options.optimum.tolerance
 
 
 class ChemicalTransportSolver(object):
@@ -235,10 +238,12 @@ class ChemicalTransportSolver(object):
         if self.options.use_smart_equilibrium:
             # Initialize the chemical equilibrium solver
             self.equilibrium = rkt.SmartEquilibriumSolver(self.partition)
+            self.equilibrium.setOptions(self.options.smart_equilibrium)
             #self.equilibrium.setPartition(self.partition)
         else:
             # Initialize the chemical equilibrium solver
             self.equilibrium = rkt.EquilibriumSolver(self.partition)
+            self.equilibrium.setOptions(self.options.equilibrium)
             #self.equilibrium.setPartition(self.partition)
 
         # Initialize the indices of the equilibrium and kinetic species
@@ -392,15 +397,22 @@ class ChemicalTransportSolver(object):
             else:
                 # Check if the equilibrium calculation was successful
                 if not result.optimum.succeeded:
-                    b = [
-                        (elem.name(), amount)
-                        for elem, amount in zip(self.system.elements(), self.be[:, k])
-                    ]
-                    raise RuntimeError(
-                        "Failed to calculate equilibrium state at dof (%d), under "
-                        "temperature %f K, pressure %f Pa, and element molar amounts %s."
-                        % (k, states[k].temperature(), states[k].pressure(), str(b))
-                    )
+                    # Restart calculations
+                    n_tmp = np.array(states[k].speciesAmounts())
+                    n_tmp[self.ispecies_e] = 0.0
+                    states[k].setSpeciesAmounts(n_tmp)
+                    # Make an initial guess
+                    #states[k].setSpeciesAmounts(0.0)
+                    #result = self.equilibrium.approximate(states[k], T, P, self.be[:, k])
+                    #print("result.optimum.succeeded = ", result.optimum.succeeded)
+                    result = self.equilibrium.solve(states[k], T, P, self.be[:, k])
+                    if not result.optimum.succeeded:
+                        b = [(elem.name(), amount) for elem, amount in zip(self.system.elements(), self.be[:, k])]
+                        raise RuntimeError(
+                            "Failed to calculate equilibrium state at dof (%d), under "
+                            "temperature %f K, pressure %f Pa, and element molar amounts %s."
+                            % (k, states[k].temperature(), states[k].pressure(), str(b))
+                        )
 
             # Store the statistics of the equilibrium calculation
             if self.options.use_smart_equilibrium:
