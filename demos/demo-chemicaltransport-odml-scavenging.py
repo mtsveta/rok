@@ -23,9 +23,9 @@ year = 365 * day
 
 # Parameters for the reactive transport simulation
 lx = 100
-ly = 10
+ly = 30
 nx = 100  # the number of mesh cells along the x-coordinate
-ny = 10  # the number of mesh cells along the y-coordinate
+ny = 30  # the number of mesh cells along the y-coordinate
 nz = 0  # the number of mesh cells along the y-coordinate
 
 dt = 0.05*day  # the time step (in units of s)
@@ -50,7 +50,7 @@ activity_model = "dk-selected-species"
 # Parameters for the ODML algorithm
 # --------------------------------------------------------------------------
 
-smart_equlibrium_reltol = 5e-3
+smart_equlibrium_reltol = 1e-2
 amount_fraction_cutoff = 1e-14
 mole_fraction_cutoff = 1e-14
 
@@ -105,7 +105,6 @@ print("CFL :", cfl)
 
 
 # Initialise the chemical editor
-
 db = rkt.Database('supcrt07.xml')
 dhModel = rkt.DebyeHuckelParams()
 dhModel.setPHREEQC()
@@ -169,8 +168,6 @@ smart_cells = np.empty((nsteps, ndofs))
 rt_results = [rok.ChemicalTransportResult()] * (nsteps)
 
 # List of name of species and elements we track
-#species_out = ["Ca++", "Mg++", "Calcite", "Dolomite", "CO2(aq)", "HCO3-", "Cl-", "H2O(l)"]
-#elements_out = ["H", "O", "C", "Ca", "Mg", "Na", "Cl"]
 species_out = ["H+", "HS-", "S2--", "SO4--", "HSO4-", "H2S(aq)", "Pyrrhotite", "Siderite"]
 elements_out = ["C", "Ca", "Cl", "Fe", "H", "K", "Mg", "Na", "O", "S", "Z"]
 
