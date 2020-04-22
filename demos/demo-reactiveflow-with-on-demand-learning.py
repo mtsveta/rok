@@ -4,7 +4,6 @@ sys.path.insert(2, '/home/skyas/polybox/allanleal-cpp-reactivetransportsolver-de
 import numpy as np
 import rok
 import time
-import sys
 
 # Time constants
 second = 1
@@ -14,29 +13,30 @@ day = 24 * hour
 week = 7 * day
 year = 365 * day
 
-# Mathematical constants
-pi = 3.14159265359
+smart_equlibrium_reltol = 0.001
+amount_fraction_cutoff = 1e-14
+mole_fraction_cutoff = 1e-14
+
 
 # Parameters for the reactive transport simulation
 nx = 100                # the number of mesh cells along the x-axis
 ny = 100                # the number of mesh cells along the y-axis
-nz = 25                # the number of mesh cells along the y-axis
+nz = 0                # the number of mesh cells along the y-axis
 Lx = 1.6               # the length of the mesh along the x-axis
 Ly = 1.0               # the length of the mesh along the y-axis
 nsteps = 1000          # the number of time steps
 cfl = 0.3              # the CFL number to be used in the calculation of time step
 T  = 60.0 + 273.15     # the temperature (in units of K)
 P  = 1e5               # the pressure (in units of Pa)
-tend = 1*day           # the final time (in units of s)
+tend = 1*hour           # the final time (in units of s)
 
 # method_flow = 'cgls'
 # method_flow = 'dgls'
 method_flow = 'sdhm'
-
 method_transport = 'supg'
 
 # The path to where the result files are output
-resultsdir = f'results/demo-reactiveflow-with-on-demand-learning/mesh-{nx}x{ny}-cfl-{cfl}-flow-{method_flow}-transport-{method_transport}-odml-hkf-latest-xtol-1e-12-euclidean-distance/'
+resultsdir = f'results/demo-reactiveflow-with-on-demand-learning/mesh-{nx}x{ny}-cfl-{cfl}-flow-{method_flow}-transport-{method_transport}-odml-hkf/'
 
 # Initialise the mesh
 mesh = rok.RectangleMesh(nx, ny, Lx, Ly, quadrilateral=True)
@@ -85,6 +85,7 @@ problem_ic.add('CaCO3', 10, 'mol')
 problem_ic.add('SiO2', 10, 'mol')
 problem_ic.add('O2', 1.0, 'umol')  # to improve behavior
 problem_ic.add('MgCO3', 1.0, 'umol')  # to improve behavior
+#problem_ic.add("MgCl2", 1e-10, "mol")
 
 # Define the boundary condition of the reactive transport modeling problem
 problem_bc = rok.EquilibriumProblem(system)
@@ -173,6 +174,7 @@ print('max(u) = ', np.max(flow.u.dat.data[:,0]), flush=True)
 print('max(k) = ', np.max(k.dat.data), flush=True)
 print('div(u)*dx =', rok.assemble(rok.div(flow.u)*rok.dx), flush=True)
 print('dt = {} minute'.format(dt/minute), flush=True)
+timings_transport = []
 
 start_time = time.time()
 
@@ -201,6 +203,8 @@ while t < tend + dt and step < nsteps:
     # Perform one transport step from `t` to `t + dt`
     transport.step(field, dt)
 
+    timings_transport.append(transport.result.seconds)
+
     # rho.assign(field.densities()[0])
 
     # Update the current time
@@ -209,3 +213,4 @@ while t < tend + dt and step < nsteps:
 
     print(f'Elapsed time in step {step}: {time.time() - time_step_start} seconds', flush=True)
 
+print("Timings equilibrium conv: ", timings_transport)
