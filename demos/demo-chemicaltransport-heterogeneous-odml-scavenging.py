@@ -129,33 +129,39 @@ if activity_model == "pitzer-full":
         .setActivityModelDrummondCO2()
 elif activity_model == "pitzer-selected-species":
     #editor.addAqueousPhase("H2O(l) H+ OH- Na+ Cl- Ca++ Mg++ HCO3- CO2(aq) CO3--") \
-    editor.addAqueousPhase(['H2O(l)', 'H+', 'OH-', 'HCO3-', 'Mg(HCO3)+', 'Ca(HCO3)+', 'MgCO3(aq)',
-                        'CO3--', 'CaCO3(aq)', 'Ca++', 'CaSO4(aq)', 'CaOH+', 'Cl-', 'FeCl++',
-                        'FeCl2(aq)', 'FeCl+', 'Fe++', 'FeOH+', 'FeOH++', 'Fe+++', 'H2(aq)', 'K+',
-                        'KSO4-', 'Mg++', 'MgSO4(aq)', 'MgCO3(aq)', 'MgOH+', 'Na+', 'NaSO4-',
-                        'O2(aq)', 'H2S(aq)', 'HS-', 'S5--', 'S4--', 'S3--', 'S2--', 'SO4--',
-                        'NaSO4-', 'MgSO4(aq)', 'CaSO4(aq)', 'KSO4-', 'HSO4-']) \
+    editor.addAqueousPhase(['Ca(HCO3)+', 'CO3--', 'CaCO3(aq)', 'Ca++', 'CaSO4(aq)', 'CaOH+', 'Cl-',
+                            'FeCl++', 'FeCl2(aq)', 'FeCl+', 'Fe++', 'FeOH+', 'FeOH++', 'Fe+++',
+                            'H2S(aq)', 'H2(aq)', 'HS-', 'H2O(l)', 'H+', 'OH-', 'HCO3-', 'HSO4-',
+                            'KSO4-',  'K+',
+                            'Mg++', 'Mg(HCO3)+', 'MgCO3(aq)', 'MgSO4(aq)', 'MgOH+',
+                            'Na+', 'NaSO4-',
+                            'O2(aq)',
+                            'S5--', 'S4--', 'S3--', 'S2--', 'SO4--']) \
         .setChemicalModelPitzerHMW() \
         .setActivityModelDrummondCO2()
 elif activity_model == "hkf-full":
     editor.addAqueousPhaseWithElements('C Ca Cl Fe H K Mg Na O S')
 elif activity_model == "hkf-selected-species":
-    editor.addAqueousPhase(['H2O(l)', 'H+', 'OH-', 'HCO3-', 'Mg(HCO3)+', 'Ca(HCO3)+', 'MgCO3(aq)',
-                        'CO3--', 'CaCO3(aq)', 'Ca++', 'CaSO4(aq)', 'CaOH+', 'Cl-', 'FeCl++',
-                        'FeCl2(aq)', 'FeCl+', 'Fe++', 'FeOH+', 'FeOH++', 'Fe+++', 'H2(aq)', 'K+',
-                        'KSO4-', 'Mg++', 'MgSO4(aq)', 'MgCO3(aq)', 'MgOH+', 'Na+', 'NaSO4-',
-                        'O2(aq)', 'H2S(aq)', 'HS-', 'S5--', 'S4--', 'S3--', 'S2--', 'SO4--',
-                        'NaSO4-', 'MgSO4(aq)', 'CaSO4(aq)', 'KSO4-', 'HSO4-'])
+    editor.addAqueousPhase(['Ca(HCO3)+', 'CO3--', 'CaCO3(aq)', 'Ca++', 'CaSO4(aq)', 'CaOH+', 'Cl-',
+                            'FeCl++', 'FeCl2(aq)', 'FeCl+', 'Fe++', 'FeOH+', 'FeOH++', 'Fe+++',
+                            'H2S(aq)', 'H2(aq)', 'HS-', 'H2O(l)', 'H+', 'OH-', 'HCO3-', 'HSO4-',
+                            'KSO4-',  'K+',
+                            'Mg++', 'Mg(HCO3)+', 'MgCO3(aq)', 'MgSO4(aq)', 'MgOH+',
+                            'Na+', 'NaSO4-',
+                            'O2(aq)',
+                            'S5--', 'S4--', 'S3--', 'S2--', 'SO4--'])
 elif activity_model == "dk-full":
     editor.addAqueousPhaseWithElements('C Ca Cl Fe H K Mg Na O S') \
         .setChemicalModelDebyeHuckel()
 elif activity_model == "dk-selected-species":
-    editor.addAqueousPhase(['H2O(l)', 'H+', 'OH-', 'HCO3-', 'Mg(HCO3)+', 'Ca(HCO3)+', 'MgCO3(aq)',
-                        'CO3--', 'CaCO3(aq)', 'Ca++', 'CaSO4(aq)', 'CaOH+', 'Cl-', 'FeCl++',
-                        'FeCl2(aq)', 'FeCl+', 'Fe++', 'FeOH+', 'FeOH++', 'Fe+++', 'H2(aq)', 'K+',
-                        'KSO4-', 'Mg++', 'MgSO4(aq)', 'MgCO3(aq)', 'MgOH+', 'Na+', 'NaSO4-',
-                        'O2(aq)', 'H2S(aq)', 'HS-', 'S5--', 'S4--', 'S3--', 'S2--', 'SO4--',
-                        'NaSO4-', 'MgSO4(aq)', 'CaSO4(aq)', 'KSO4-', 'HSO4-']) \
+    editor.addAqueousPhase(['Ca(HCO3)+', 'CO3--', 'CaCO3(aq)', 'Ca++', 'CaSO4(aq)', 'CaOH+', 'Cl-',
+                            'FeCl++', 'FeCl2(aq)', 'FeCl+', 'Fe++', 'FeOH+', 'FeOH++', 'Fe+++',
+                            'H2S(aq)', 'H2(aq)', 'HS-', 'H2O(l)', 'H+', 'OH-', 'HCO3-', 'HSO4-',
+                            'KSO4-',  'K+',
+                            'Mg++', 'Mg(HCO3)+', 'MgCO3(aq)', 'MgSO4(aq)', 'MgOH+',
+                            'Na+', 'NaSO4-',
+                            'O2(aq)',
+                            'S5--', 'S4--', 'S3--', 'S2--', 'SO4--']) \
         .setChemicalModelDebyeHuckel(dhModel)
 
 editor.addMineralPhase('Pyrrhotite')
