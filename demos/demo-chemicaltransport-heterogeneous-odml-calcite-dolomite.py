@@ -118,29 +118,6 @@ problem.addVelocityComponentBC(rok.Constant(0.0), "y", "top")
 flow = rok.DarcySolver(problem, method=method_flow)
 flow.solve()
 
-"""
-import matplotlib.pyplot as plt
-rok.plot(k)
-plt.axis("off")
-plt.title("Permiability, k")
-plt.show()
-#plt.savefig(folder_results + tag_smart + '/permeability.png')
-#plt.close()
-
-rok.plot(flow.u)
-plt.axis("off")
-plt.title("Velocity, u")
-plt.show()
-#plt.savefig(folder_results + tag_smart + '/velocity.png')
-#plt.close()
-
-rok.plot(flow.p)
-plt.title("Pressure, p")
-plt.axis("off")
-plt.show()
-#plt.savefig(folder_results + tag_smart + '/pressure.png')
-#plt.close()
-"""
 # Initialise the chemical editor
 editor = rkt.ChemicalEditor()
 if activity_model == "pitzer-full":
@@ -270,7 +247,11 @@ def run_transport(use_smart_equilibrium):
     max_ux = np.max(flow.u.dat.data[:, 0])
     max_uy = np.max(flow.u.dat.data[:, 1])
     delta_x = lx / nx
-    delta_y = ly / nx
+    delta_y = ly / ny
+
+    print("dx = ", delta_x)
+    print("dy = ", delta_y)
+    print("dofs = ", ndofs)
 
     # Define time step according to the velocity
     dt = cfl / max(max_ux / delta_x, max_uy / delta_y)

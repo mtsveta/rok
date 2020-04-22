@@ -24,13 +24,14 @@ year = 365 * day
 # Parameters for the reactive transport simulation
 lx = 2
 ly = 1
-lz = 0
+lz = 1
 nx = 50  # the number of mesh cells along the x-coordinate
 ny = 25  # the number of mesh cells along the y-coordinate
 nz = 0  # the number of mesh cells along the y-coordinate
+#nz = 25  # the number of mesh cells along the y-coordinate
 
 dt = 30 * minute  # the time step (in units of s)
-nsteps = 5000  # the number of time steps
+nsteps = 1000  # the number of time steps
 
 D = fire.Constant(1.0e-9)  # the diffusion coefficient (in units of m2/s)
 v = fire.Constant([1.0 / week, 0.0])  # the fluid pore velocity (in units of m/s)
@@ -39,9 +40,9 @@ P = 100 * 1e5  # the pressure (in units of Pa)
 
 # Activity model for the aqueous species
 
-activity_model = "hkf-full"
+#activity_model = "hkf-full"
 #activity_model = "hkf-selected-species"
-#activity_model = "pitzer-full"
+activity_model = "pitzer-full"
 #activity_model = "pitzer-selected-species"
 #activity_model = "dk-full"
 #activity_model = "dk-selected-species"
@@ -51,7 +52,7 @@ activity_model = "hkf-full"
 # Parameters for the ODML algorithm
 # --------------------------------------------------------------------------
 
-smart_equlibrium_reltol = 0.001
+smart_equlibrium_reltol = 1e-3
 amount_fraction_cutoff = 1e-14
 mole_fraction_cutoff = 1e-14
 
@@ -95,12 +96,15 @@ def print_test_summary():
 print_test_summary()
 
 # Initialise the mesh
-# mesh = fire.UnitIntervalMesh(nx)
-# mesh = fire.UnitCubeMesh(nx, ny, nz)
-# mesh = fire.UnitSquareMesh(nx, ny, quadrilateral=True)
 mesh = fire.RectangleMesh(nx, ny, lx, ly, quadrilateral=True)
+#mesh = fire.BoxMesh(nx, ny, nz, lx, ly, lz)
 V = fire.FunctionSpace(mesh, "CG", 1)
 ndofs = V.dof_count
+dx = lx / nx
+dy = ly / ny
+cfl = (v.values()[0] / dx + v.values()[1] / dy) * dt
+print("CFL :", cfl)
+
 
 # Initialise the chemical editor
 editor = rkt.ChemicalEditor()
@@ -129,6 +133,8 @@ system = rkt.ChemicalSystem(editor)
 
 # Define equilibrium options
 equilibrium_options = rkt.EquilibriumOptions()
+equilibrium_options.hessian = rkt.GibbsHessian.Exact # ensure the use of an exact Hessian of the Gibbs energy function
+equilibrium_options.optimum.tolerance = 1e-10 # ensure the use of a stricter residual tolerance for the Gibbs energy minimization
 # Define smart equilibrium options
 smart_equilibrium_options = rkt.SmartEquilibriumOptions()
 smart_equilibrium_options.reltol = smart_equlibrium_reltol
@@ -274,18 +280,18 @@ def run_transport(use_smart_equilibrium):
 # Run reactive transport with the ODML algorithm
 # --------------------------------------------------------------------------
 
-
+#'''
 start_rt = time.time()
 
 use_smart_equilibrium = True
 run_transport(use_smart_equilibrium)
 
 timing_rt_smart = time.time() - start_rt
-#print("Timings equilibrium smart: ", timings_equilibrium_smart)
-#print("Timings transport: ", timings_transport)
-#print("Learnings: ", learnings)
+np.savetxt(folder_results + tag_smart + '/learnings.txt', learnings)
+np.savetxt(folder_results + tag_smart + '/time-smart.txt', timings_equilibrium_smart)
+np.savetxt(folder_results + tag_smart + '/time-transport.txt', timings_transport)
 print("Total learnings: {} out of {} ( {:<5.2f}% )".format(int(np.sum(learnings)), ndofs * nsteps, int(np.sum(learnings)) / ndofs / nsteps * 100))
-
+#'''
 # --------------------------------------------------------------------------
 # Run reactive transport with the conventional algorithm
 # --------------------------------------------------------------------------
@@ -296,14 +302,14 @@ use_smart_equilibrium = False
 run_transport(use_smart_equilibrium)
 
 timing_rt_conv = time.time() - start_rt
-#print("Timings equilibrium conv = ", timings_equilibrium_conv)
-#print("Timings transport: ", timings_transport)
+np.savetxt(folder_results + tag_smart + '/time-conv.txt', timings_equilibrium_conv)
 
 # --------------------------------------------------------------------------
 # Analyze and plot results
 # --------------------------------------------------------------------------
 
-print("Total speedup       : ", timing_rt_conv/timing_rt_smart)
+#print("Total speedup       : ", timing_rt_conv/timing_rt_smart)
+
 print("Chem. calc. speedup : ", np.sum(timings_equilibrium_conv) / np.sum(timings_equilibrium_smart))
 print("")
 plots_folder_results = folder_results + "-plots" + tag_smart
