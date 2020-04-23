@@ -11,6 +11,9 @@ dependencies:
   - gstools
   - pre-commit
   - black
+  - matplotlib
+  - bokeh
+  - progress
 
 environment:
   PYTHONPATH:
