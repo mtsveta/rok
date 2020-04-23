@@ -29,7 +29,7 @@ lz = 1
 nx = 100  # the number of mesh cells along the x-coordinate
 ny = 100  # the number of mesh cells along the y-coordinate
 nz = 0  # the number of mesh cells along the y-coordinate
-nsteps = 1000  # the number of time steps
+nsteps = 10000  # the number of time steps
 tend = 1*week  # the final time (in units of s)
 cfl = 0.3     # the CFL number to be used in the calculation of time step
 
@@ -50,12 +50,11 @@ activity_model = "hkf-full"
 # Parameters for the ODML algorithm
 # --------------------------------------------------------------------------
 
-smart_equlibrium_reltol = 0.001
+smart_equlibrium_reltol = 0.01
 amount_fraction_cutoff = 1e-14
 mole_fraction_cutoff = 1e-14
 
 tag_smart = "-" + activity_model + \
-      "-tend-" + "{:d}".format(tend) + \
       "-nx-" + str(nx) + \
       "-ny-" + str(ny) + \
       "-nz-" + str(nz) + \
@@ -64,7 +63,6 @@ tag_smart = "-" + activity_model + \
       "-reltol-" + "{:.{}e}".format(smart_equlibrium_reltol, 1) + \
       "-smart"
 tag_conv = "-" + activity_model + \
-      "-tend-" + "{:d}".format(tend) + \
       "-nx-" + str(nx) + \
       "-ny-" + str(ny) + \
       "-nz-" + str(nz) + \
@@ -89,7 +87,6 @@ def print_test_summary():
     print("ODML retol      :", smart_equlibrium_reltol)
     print("Number of DOFs  : {} = ({} + 1) x ({} + 1) x ({} + 1)".format((nx+1)*(ny+1)*(nz+1), nx, ny, nz))
     print("Number of steps :", nsteps)
-    print("End time        : {} s".format(tend))
 
 print_test_summary()
 
@@ -112,10 +109,8 @@ problem.setFluidDensity(rho)
 problem.setFluidViscosity(mu)
 problem.setRockPermeability(k)
 problem.setSourceRate(f)
-problem.addPressureBC(1.1 * P, "left")
-problem.addPressureBC(P, "right")
-#problem.addPressureBC(1e5 + 1000, "left")
-#problem.addPressureBC(1e5, "right")
+problem.addPressureBC(P, "left")
+problem.addPressureBC(0.9 * P, "right")
 problem.addVelocityComponentBC(rok.Constant(0.0), "y", "bottom")
 problem.addVelocityComponentBC(rok.Constant(0.0), "y", "top")
 
@@ -214,29 +209,54 @@ def run_transport(use_smart_equilibrium):
 
     states_ic = []
 
-    for p in flow.p.dat.data:
+    if use_smart_equilibrium:
+        solver = rkt.SmartEquilibriumSolver(system)
+        solver.setOptions(smart_equilibrium_options)
+    else:
+        solver = rkt.EquilibriumSolver(system)
+        solver.setOptions(equilibrium_options)
 
-        # Define the initial condition of the reactive transport modeling problem
-        problem_ic = rkt.EquilibriumProblem(system)
-        problem_ic.setTemperature(T)
-        problem_ic.setPressure(p)
-        problem_ic.add("H2O", 1.0, "kg")
-        problem_ic.add("O2", 1.0, "umol")
-        problem_ic.add("NaCl", 0.7, "mol")
-        problem_ic.add("CaCO3", 10, "mol")
-        problem_ic.add("SiO2", 10, "mol")
-        problem_ic.add("MgCl2", 1e-10, "mol")
-        problem_ic.add('MgCO3', 1.0, 'umol')
+    state_ic = rkt.ChemicalState(system)
 
-        states_ic.append(rkt.equilibrate(problem_ic))
+    time_0 = time.time()
+    #print(flow.p.dat)
+
+    pressures = flow.p.dat.data
+    # Define the initial condition of the reactive transport modeling problem
+    problem_ic = rkt.EquilibriumProblem(system)
+    problem_ic.add("H2O", 1.0, "kg")
+    problem_ic.add("O2", 1.0, "umol")
+    problem_ic.add("NaCl", 0.7, "mol")
+    problem_ic.add("CaCO3", 10, "mol")
+    problem_ic.add("SiO2", 10, "mol")
+    problem_ic.add("MgCl2", 1e-10, "mol")
+    problem_ic.add('MgCO3', 1.0, 'umol')
+
+    b_ic = problem_ic.elementAmounts()
+
+    # TODO : this code assumes that out of 40000 pressure points reconstructed by DarcySolve for DG FunctionalSpace
+    # TODO : first 10201 are mesh nodes that correspond to CG Functionalpave
+
+    bar = IncrementalBar('Initialization of the field with teh chemical states having different pressures:', max=ndofs)
+    for i in range(ndofs):
+        solver.solve(state_ic, T, pressures[i], b_ic)
+        state_ic.scalePhaseVolume("Aqueous", 0.1, "m3")
+        state_ic.scalePhaseVolume("Quartz", 0.882, "m3")
+        state_ic.scalePhaseVolume("Calcite", 0.018, "m3")
+
+        states_ic.append(state_ic)
 
         # Scale the volumes of the phases in the initial condition such that their sum is 1 m3
-        states_ic[-1].scalePhaseVolume("Aqueous", 0.1, "m3")
-        states_ic[-1].scalePhaseVolume("Quartz", 0.882, "m3")
-        states_ic[-1].scalePhaseVolume("Calcite", 0.018, "m3")
+        bar.next()
+
+    bar.finish()
 
     field.fillStates(states_ic)
     field.update()
+
+    #solver.outputClusterInfo()
+    print("Time for the field initialization", time.time()- time_0)
+    #input()
 
     # Define the boundary condition of the reactive transport modeling problem
     problem_bc = rkt.EquilibriumProblem(system)
@@ -270,6 +290,8 @@ def run_transport(use_smart_equilibrium):
     transport.addBoundaryCondition(state_bc, 1)  # 1 means left side in a rectangular mesh
     transport.setVelocity([flow.u])
     transport.setDiffusion([D])
+    transport.setEquilibriumSolver(solver)
+    transport.initialize(field)
 
     # Initialize the BC of the transport problem
     #bc = rok.DirichletBC(V_transport, cL, 1, method="geometric")
@@ -351,6 +373,7 @@ def run_transport(use_smart_equilibrium):
 
         #print(f'Elapsed time in step {step}: {time.time() - time_step_start} seconds', flush=True)
         bar.next()
+
     bar.finish()
     if use_smart_equilibrium:
         transport.equilibrium.outputClusterInfo()
