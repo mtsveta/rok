@@ -113,6 +113,7 @@ class ChemicalTransportSolver(object):
         self.source = [fire.Constant(0.0) for i in range(self.num_fluid_phases)]
         self.boundary_conditions = []
         self.initialized = False
+        self.solver_is_initialized = False
         self.options = ChemicalTransportOptions()
 
         # Initialize the function space used in the ChemicalField instance
@@ -178,6 +179,15 @@ class ChemicalTransportSolver(object):
         self.diffusion = diffusion
         self.initialized = False
 
+    def setEquilibriumSolver(self, solver):
+        # Initialize the chemical equilibrium solver
+        if self.options.use_smart_equilibrium:
+            self.equilibrium = solver
+        else:
+            self.equilibrium = solver
+        self.initialized = False
+        self.solver_is_initialized = True
+
     def setSource(self, source):
         self.source = source
         self.initialized = False
@@ -216,6 +226,12 @@ class ChemicalTransportSolver(object):
 
         self.initialized = True
 
+        # Initialize zero step
+        self.steps = 0
+
+        # Test parameter
+        self.skipped_equilibrium_cacl = 0
+
         # Check if the user provided any boundary conditions
         if self.boundary_conditions is []:
             RuntimeError(
@@ -237,14 +253,14 @@ class ChemicalTransportSolver(object):
 
         if self.options.use_smart_equilibrium:
             # Initialize the chemical equilibrium solver
-            self.equilibrium = rkt.SmartEquilibriumSolver(self.partition)
+            if not self.solver_is_initialized:
+                self.equilibrium = rkt.SmartEquilibriumSolver(self.partition)
             self.equilibrium.setOptions(self.options.smart_equilibrium)
-            #self.equilibrium.setPartition(self.partition)
         else:
             # Initialize the chemical equilibrium solver
-            self.equilibrium = rkt.EquilibriumSolver(self.partition)
+            if not self.solver_is_initialized:
+                self.equilibrium = rkt.EquilibriumSolver(self.partition)
             self.equilibrium.setOptions(self.options.equilibrium)
-            #self.equilibrium.setPartition(self.partition)
 
         # Initialize the indices of the equilibrium and kinetic species
         self.ispecies_e = self.partition.indicesEquilibriumSpecies()
@@ -385,6 +401,7 @@ class ChemicalTransportSolver(object):
             if self.options.use_smart_equilibrium:
                 # Check if the smart equilibrium calculation was successful
                 if not (result.learning.gibbs_energy_minimization.optimum.succeeded or result.estimate.accepted):
+                    '''
                     b = [
                         (elem.name(), amount)
                         for elem, amount in zip(self.system.elements(), self.be[:, k])
@@ -394,7 +411,21 @@ class ChemicalTransportSolver(object):
                         "temperature %f K, pressure %f Pa, and element molar amounts %s."
                         % (k, states[k].temperature(), states[k].pressure(), str(b))
                     )
+                    '''
+                    self.skipped_equilibrium_cacl += 1
+                    print(f"Failed to calculate equilibrium state at dof {k}, step {self.steps}. "
+                          f"Totally {self.skipped_equilibrium_cacl} equilibrium calculations skipped.")
+                    if k > 0: states[k].setSpeciesAmounts(states[k - 1].speciesAmounts())
+
+
             else:
+                # Check if the equilibrium calculation was successful
+                if not result.optimum.succeeded:
+                    self.skipped_equilibrium_cacl += 1
+                    print(f"Failed to calculate equilibrium state at dof {k}, step {self.steps}. "
+                          f"Totally {self.skipped_equilibrium_cacl} equilibrium calculations skipped.")
+                    if k > 0: states[k].setSpeciesAmounts(states[k-1].speciesAmounts())
+                '''
                 # Check if the equilibrium calculation was successful
                 if not result.optimum.succeeded:
                     # Restart calculations
@@ -413,7 +444,7 @@ class ChemicalTransportSolver(object):
                             "temperature %f K, pressure %f Pa, and element molar amounts %s."
                             % (k, states[k].temperature(), states[k].pressure(), str(b))
                         )
-
+                '''
             # Store the statistics of the equilibrium calculation
             if self.options.use_smart_equilibrium:
                 smart_predictions[k] = result.estimate.accepted
@@ -470,6 +501,9 @@ class ChemicalTransportSolver(object):
 
         # Compute the time elapsed for the chemical transport step
         self.result.time = timer.time() - tbegin
+
+        # Increase step
+        self.steps += 1
 
     def elementAmountInPhase(self, element, phase):
         ielement = self.system.indexElement(element)
