@@ -130,7 +130,7 @@ if activity_model == "pitzer-full":
 elif activity_model == "pitzer-selected-species":
     #editor.addAqueousPhase("H2O(l) H+ OH- Na+ Cl- Ca++ Mg++ HCO3- CO2(aq) CO3--") \
     editor.addAqueousPhase(['Ca(HCO3)+', 'CO3--', 'CaCO3(aq)', 'Ca++', 'CaSO4(aq)', 'CaOH+', 'Cl-',
-                            'FeCl++', 'FeCl2(aq)', 'FeCl+', 'Fe++', 'FeOH+', 'FeOH++', 'Fe+++',
+                            'FeCl++', 'FeCl2(aq)', 'FeCl+', 'Fe++', 'FeOH+', 'Fe+++',
                             'H2S(aq)', 'H2(aq)', 'HS-', 'H2O(l)', 'H+', 'OH-', 'HCO3-', 'HSO4-',
                             'KSO4-',  'K+',
                             'Mg++', 'Mg(HCO3)+', 'MgCO3(aq)', 'MgSO4(aq)', 'MgOH+',
@@ -143,7 +143,7 @@ elif activity_model == "hkf-full":
     editor.addAqueousPhaseWithElements('C Ca Cl Fe H K Mg Na O S')
 elif activity_model == "hkf-selected-species":
     editor.addAqueousPhase(['Ca(HCO3)+', 'CO3--', 'CaCO3(aq)', 'Ca++', 'CaSO4(aq)', 'CaOH+', 'Cl-',
-                            'FeCl++', 'FeCl2(aq)', 'FeCl+', 'Fe++', 'FeOH+', 'FeOH++', 'Fe+++',
+                            'FeCl++', 'FeCl2(aq)', 'FeCl+', 'Fe++', 'FeOH+', 'Fe+++',
                             'H2S(aq)', 'H2(aq)', 'HS-', 'H2O(l)', 'H+', 'OH-', 'HCO3-', 'HSO4-',
                             'KSO4-',  'K+',
                             'Mg++', 'Mg(HCO3)+', 'MgCO3(aq)', 'MgSO4(aq)', 'MgOH+',
@@ -155,7 +155,7 @@ elif activity_model == "dk-full":
         .setChemicalModelDebyeHuckel()
 elif activity_model == "dk-selected-species":
     editor.addAqueousPhase(['Ca(HCO3)+', 'CO3--', 'CaCO3(aq)', 'Ca++', 'CaSO4(aq)', 'CaOH+', 'Cl-',
-                            'FeCl++', 'FeCl2(aq)', 'FeCl+', 'Fe++', 'FeOH+', 'FeOH++', 'Fe+++',
+                            'FeCl++', 'FeCl2(aq)', 'FeCl+', 'Fe++', 'FeOH+', 'Fe+++',
                             'H2S(aq)', 'H2(aq)', 'HS-', 'H2O(l)', 'H+', 'OH-', 'HCO3-', 'HSO4-',
                             'KSO4-',  'K+',
                             'Mg++', 'Mg(HCO3)+', 'MgCO3(aq)', 'MgSO4(aq)', 'MgOH+',
@@ -186,7 +186,7 @@ smart_equilibrium_options.mole_fraction_cutoff = mole_fraction_cutoff
 rt_results = []
 
 # List of name of species and elements we track
-species_out = ["H+", "HS-", "S2--", "SO4--", "HSO4-", "H2S(aq)", "Pyrrhotite", "Siderite"]
+species_out = ["Fe++", "H+", "HS-", "S2--", "CO3--", "HSO4-", "H2S(aq)", "Pyrrhotite", "Siderite"]
 elements_out = ["C", "Ca", "Cl", "Fe", "H", "K", "Mg", "Na", "O", "S", "Z"]
 
 # List of functions representing species and elements we track
