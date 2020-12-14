@@ -1,5 +1,6 @@
 import sys
-sys.path.insert(2, '/home/skyas/polybox/allanleal-cpp-reactivetransportsolver-demo/build/lib/python3.7/site-packages')
+sys.path.remove('/home/skyas/polybox/rok')
+sys.path.insert(1, '/home/skyas/polybox/allanleal-cpp-reactivetransportsolver-demo-restored/build/lib/python3.7/site-packages')
 import firedrake as fire
 import reaktoro as rkt
 import rok
@@ -23,24 +24,23 @@ T = 25.0 + 273.15  # the temperature (in units of K)
 P = 1.01325 * 1e5  # the pressure (in units of Pa)
 
 # Discretization parameters for the reactive transport simulation
-lx = 1.6
-ly = 1.0
-lz = 1
+# Parameters for the reactive transport simulation
+lx = 100
+ly = 30
 nx = 100  # the number of mesh cells along the x-coordinate
-ny = 100  # the number of mesh cells along the y-coordinate
-nz = 0  # the number of mesh cells along the y-coordinate
+ny = 30  # the number of mesh cells along the y-coordinate
 nsteps = 2000  # the number of time steps
 cfl = 0.3     # the CFL number to be used in the calculation of time step
-
+nnodes = (nx + 1)*(ny + 1)
 # PDE methods
 method_flow = "sdhm"
 method_transport = 'supg'
 
 # Activity model for the aqueous species
 
-activity_model = "hkf-full"
+#activity_model = "hkf-full"
 #activity_model = "hkf-selected-species"
-#activity_model = "pitzer-full"
+activity_model = "pitzer-full"
 #activity_model = "pitzer-selected-species"
 #activity_model = "dk-full"
 #activity_model = "dk-selected-species"
@@ -50,25 +50,26 @@ activity_model = "hkf-full"
 # --------------------------------------------------------------------------
 
 smart_equlibrium_reltol = 0.001
+#smart_equlibrium_reltol = 0.005
+#smart_equlibrium_reltol = 0.001
+
 amount_fraction_cutoff = 1e-14
 mole_fraction_cutoff = 1e-14
 
 tag_smart = "-" + activity_model + \
       "-nx-" + str(nx) + \
       "-ny-" + str(ny) + \
-      "-nz-" + str(nz) + \
-      "-ncells-" + str((nx + 1)*(ny + 1)*(nz + 1)) + \
+      "-nnodes-" + str(nnodes) + \
       "-nsteps-" + str(nsteps) + \
       "-reltol-" + "{:.{}e}".format(smart_equlibrium_reltol, 1) + \
       "-smart"
 tag_conv = "-" + activity_model + \
       "-nx-" + str(nx) + \
       "-ny-" + str(ny) + \
-      "-nz-" + str(nz) + \
-      "-ncells-" + str((nx + 1)*(ny + 1)*(nz + 1)) + \
+      "-nnodes-" + str(nnodes) + \
       "-nsteps-" + str(nsteps) + \
       "-conv"
-folder_results = 'results/demo-scavenging-heterogeneous-odml'
+folder_results = 'results-new-sdhm-11.07.20/demo-scavenging-heterogeneous-odml'
 
 # The seconds spent on equilibrium and transport calculations per time step
 time_steps = []
@@ -84,7 +85,7 @@ def print_test_summary():
 
     print("Activity model  :", activity_model)
     print("ODML retol      :", smart_equlibrium_reltol)
-    print("Number of DOFs  : {} = ({} + 1) x ({} + 1) x ({} + 1)".format((nx+1)*(ny+1)*(nz+1), nx, ny, nz))
+    print("Number of DOFs  : {} = ({} + 1) x ({} + 1)".format(nnodes, nx, ny))
     print("Number of steps :", nsteps)
 
 print_test_summary()
@@ -123,45 +124,32 @@ dhModel.setPHREEQC()
 
 editor = rkt.ChemicalEditor(db)
 
+selected_species = ['Ca(HCO3)+', 'CO3--', 'CaCO3(aq)', 'Ca++', 'CaSO4(aq)', 'CaOH+', 'Cl-',
+                            'FeCl++', 'FeCl2(aq)', 'FeCl+', 'Fe++', 'FeOH+', 'Fe+++', 'FeOH++', 
+                            'H2S(aq)', 'H2(aq)', 'HS-', 'H2O(l)', 'H+', 'OH-', 'HCO3-', 'HSO4-',
+                            'KSO4-',  'K+',
+                            'Mg++', 'Mg(HCO3)+', 'MgCO3(aq)', 'MgSO4(aq)', 'MgOH+',
+                            'Na+', 'NaSO4-',
+                            'O2(aq)',
+                            'S5--', 'S4--', 'S3--', 'S2--', 'SO4--']
 if activity_model == "pitzer-full":
     editor.addAqueousPhaseWithElements('C Ca Cl Fe H K Mg Na O S') \
         .setChemicalModelPitzerHMW() \
         .setActivityModelDrummondCO2()
 elif activity_model == "pitzer-selected-species":
     #editor.addAqueousPhase("H2O(l) H+ OH- Na+ Cl- Ca++ Mg++ HCO3- CO2(aq) CO3--") \
-    editor.addAqueousPhase(['Ca(HCO3)+', 'CO3--', 'CaCO3(aq)', 'Ca++', 'CaSO4(aq)', 'CaOH+', 'Cl-',
-                            'FeCl++', 'FeCl2(aq)', 'FeCl+', 'Fe++', 'FeOH+', 'Fe+++',
-                            'H2S(aq)', 'H2(aq)', 'HS-', 'H2O(l)', 'H+', 'OH-', 'HCO3-', 'HSO4-',
-                            'KSO4-',  'K+',
-                            'Mg++', 'Mg(HCO3)+', 'MgCO3(aq)', 'MgSO4(aq)', 'MgOH+',
-                            'Na+', 'NaSO4-',
-                            'O2(aq)',
-                            'S5--', 'S4--', 'S3--', 'S2--', 'SO4--']) \
+    editor.addAqueousPhase(selected_species) \
         .setChemicalModelPitzerHMW() \
         .setActivityModelDrummondCO2()
 elif activity_model == "hkf-full":
     editor.addAqueousPhaseWithElements('C Ca Cl Fe H K Mg Na O S')
 elif activity_model == "hkf-selected-species":
-    editor.addAqueousPhase(['Ca(HCO3)+', 'CO3--', 'CaCO3(aq)', 'Ca++', 'CaSO4(aq)', 'CaOH+', 'Cl-',
-                            'FeCl++', 'FeCl2(aq)', 'FeCl+', 'Fe++', 'FeOH+', 'Fe+++',
-                            'H2S(aq)', 'H2(aq)', 'HS-', 'H2O(l)', 'H+', 'OH-', 'HCO3-', 'HSO4-',
-                            'KSO4-',  'K+',
-                            'Mg++', 'Mg(HCO3)+', 'MgCO3(aq)', 'MgSO4(aq)', 'MgOH+',
-                            'Na+', 'NaSO4-',
-                            'O2(aq)',
-                            'S5--', 'S4--', 'S3--', 'S2--', 'SO4--'])
+    editor.addAqueousPhase(selected_species)
 elif activity_model == "dk-full":
     editor.addAqueousPhaseWithElements('C Ca Cl Fe H K Mg Na O S') \
         .setChemicalModelDebyeHuckel()
 elif activity_model == "dk-selected-species":
-    editor.addAqueousPhase(['Ca(HCO3)+', 'CO3--', 'CaCO3(aq)', 'Ca++', 'CaSO4(aq)', 'CaOH+', 'Cl-',
-                            'FeCl++', 'FeCl2(aq)', 'FeCl+', 'Fe++', 'FeOH+', 'Fe+++',
-                            'H2S(aq)', 'H2(aq)', 'HS-', 'H2O(l)', 'H+', 'OH-', 'HCO3-', 'HSO4-',
-                            'KSO4-',  'K+',
-                            'Mg++', 'Mg(HCO3)+', 'MgCO3(aq)', 'MgSO4(aq)', 'MgOH+',
-                            'Na+', 'NaSO4-',
-                            'O2(aq)',
-                            'S5--', 'S4--', 'S3--', 'S2--', 'SO4--']) \
+    editor.addAqueousPhase(selected_species) \
         .setChemicalModelDebyeHuckel(dhModel)
 
 editor.addMineralPhase('Pyrrhotite')
@@ -169,6 +157,8 @@ editor.addMineralPhase('Siderite')
 
 # Initialise the chemical system
 system = rkt.ChemicalSystem(editor)
+#print(system)
+#input()
 
 # Define equilibrium options
 equilibrium_options = rkt.EquilibriumOptions()
@@ -293,10 +283,14 @@ def run_transport(use_smart_equilibrium):
     max_ux = np.max(flow.u.dat.data[:, 0])
     max_uy = np.max(flow.u.dat.data[:, 1])
     delta_x = lx / nx
-    delta_y = ly / nx
+    delta_y = ly / ny
 
     # Define time step according to the velocity
     dt = cfl / max(max_ux / delta_x, max_uy / delta_y)
+
+    print("dx = ", delta_x)
+    print("dy = ", delta_y)
+    print("dofs = ", ndofs)
 
     # Outputting the results
     print('max(u) = ', np.max(flow.u.dat.data[:, 0]), flush=True)
@@ -311,10 +305,15 @@ def run_transport(use_smart_equilibrium):
     t = 0.0
     step = 0
 
-    if use_smart_equilibrium: bar = IncrementalBar('Reactive transport with the ODML algorithm:', max=nsteps)
-    else: bar = IncrementalBar('Reactive transport with the conventional algorithm:', max=nsteps)
+    #if use_smart_equilibrium: bar = IncrementalBar('Reactive transport with the ODML algorithm:', max=nsteps)
+    #else: bar = IncrementalBar('Reactive transport with the conventional algorithm:', max=nsteps)
+
+    selected_steps = [1, 100, 200, 400, 1000]
 
     while step < nsteps:
+
+        if step in selected_steps:
+            print('Progress at step {}: {:.2f} hours / {:.2f} days'.format(step, t / hour, t / day), flush=True)
 
         if step % 10 == 0:
             # For each selected species, output its molar amounts
@@ -356,8 +355,8 @@ def run_transport(use_smart_equilibrium):
         t += dt
 
         #print(f'Elapsed time in step {step}: {time.time() - time_step_start} seconds', flush=True)
-        bar.next()
-    bar.finish()
+        #bar.next()
+    #bar.finish()
     if use_smart_equilibrium:
         transport.equilibrium.outputClusterInfo()
 
@@ -365,7 +364,7 @@ def run_transport(use_smart_equilibrium):
 # --------------------------------------------------------------------------
 # Run reactive transport with the ODML algorithm
 # --------------------------------------------------------------------------
-
+"""
 start_rt = time.time()
 
 use_smart_equilibrium = True
@@ -383,10 +382,11 @@ plt.plot_on_demand_learning_countings_mpl(time_steps, learnings, plots_folder_re
 np.savetxt(folder_results + tag_smart + '/learnings.txt', learnings)
 np.savetxt(folder_results + tag_smart + '/time-smart.txt', timings_equilibrium_smart)
 np.savetxt(folder_results + tag_smart + '/time-transport.txt', timings_transport)
+"""
 # --------------------------------------------------------------------------
 # Run reactive transport with the conventional algorithm
 # --------------------------------------------------------------------------
-
+#"""
 start_rt = time.time()
 
 use_smart_equilibrium = False
@@ -406,3 +406,4 @@ print("")
 step = 1
 plt.plot_computing_costs_mpl(time_steps, (timings_equilibrium_conv, timings_equilibrium_smart, timings_transport), step, plots_folder_results)
 plt.plot_speedups_mpl(time_steps, (timings_equilibrium_conv, timings_equilibrium_smart), step, plots_folder_results)
+#"""

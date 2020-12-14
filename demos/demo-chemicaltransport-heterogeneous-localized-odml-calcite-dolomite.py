@@ -1,5 +1,6 @@
 import sys
-sys.path.insert(2, '/home/skyas/polybox/allanleal-cpp-reactivetransportsolver-demo/build/lib/python3.7/site-packages')
+sys.path.remove('/home/skyas/polybox/rok')
+sys.path.insert(1, '/home/skyas/polybox/allanleal-cpp-reactivetransportsolver-demo-restored/build/lib/python3.7/site-packages')
 import firedrake as fire
 import reaktoro as rkt
 import rok
@@ -21,6 +22,9 @@ D = fire.Constant(1.0e-9)  # the diffusion coefficient (in units of m2/s)
 cL = rok.Constant(1.0) # Dirichlet BC for the transport
 T = 60.0 + 273.15  # the temperature (in units of K)
 P = 100 * 1e5  # the pressure (in units of Pa)
+P_right = 0.9 * P #
+#P = 1e5 + 1000
+#P_right = 1e5
 
 # Discretization parameters for the reactive transport simulation
 lx = 1.6
@@ -50,7 +54,7 @@ activity_model = "hkf-full"
 # Parameters for the ODML algorithm
 # --------------------------------------------------------------------------
 
-smart_equlibrium_reltol = 0.01
+smart_equlibrium_reltol = 0.005
 amount_fraction_cutoff = 1e-14
 mole_fraction_cutoff = 1e-14
 
@@ -69,7 +73,8 @@ tag_conv = "-" + activity_model + \
       "-ncells-" + str((nx + 1)*(ny + 1)*(nz + 1)) + \
       "-nsteps-" + str(nsteps) + \
       "-conv"
-folder_results = 'results/demo-chemicaltransport-heterogeneous-odml-local-pressure'
+#folder_results = 'results-P-101000/demo-chemicaltransport-heterogeneous-odml-local-pressure'
+folder_results = 'results-P-100Pascal/demo-dolomitization-heterogeneous-localized-odml'
 
 # The seconds spent on equilibrium and transport calculations per time step
 time_steps = []
@@ -110,7 +115,8 @@ problem.setFluidViscosity(mu)
 problem.setRockPermeability(k)
 problem.setSourceRate(f)
 problem.addPressureBC(P, "left")
-problem.addPressureBC(0.9 * P, "right")
+#problem.addPressureBC(0.9 * P, "right")
+problem.addPressureBC(P_right, "right")
 problem.addVelocityComponentBC(rok.Constant(0.0), "y", "bottom")
 problem.addVelocityComponentBC(rok.Constant(0.0), "y", "top")
 
@@ -237,7 +243,8 @@ def run_transport(use_smart_equilibrium):
     # TODO : this code assumes that out of 40000 pressure points reconstructed by DarcySolve for DG FunctionalSpace
     # TODO : first 10201 are mesh nodes that correspond to CG Functionalpave
 
-    bar = IncrementalBar('Initialization of the field with teh chemical states having different pressures:', max=ndofs)
+    print('Initialization of the field with the chemical states having different pressures:')
+    #bar = IncrementalBar('Initialization of the field with the chemical states having different pressures:', max=ndofs)
     for i in range(ndofs):
         solver.solve(state_ic, T, pressures[i], b_ic)
         state_ic.scalePhaseVolume("Aqueous", 0.1, "m3")
@@ -247,9 +254,9 @@ def run_transport(use_smart_equilibrium):
         states_ic.append(state_ic)
 
         # Scale the volumes of the phases in the initial condition such that their sum is 1 m3
-        bar.next()
+        #bar.next()
 
-    bar.finish()
+    #bar.finish()
 
     field.fillStates(states_ic)
     field.update()
@@ -382,7 +389,7 @@ def run_transport(use_smart_equilibrium):
 # --------------------------------------------------------------------------
 # Run reactive transport with the ODML algorithm
 # --------------------------------------------------------------------------
-
+#'''
 start_rt = time.time()
 use_smart_equilibrium = True
 run_transport(use_smart_equilibrium)
@@ -399,6 +406,7 @@ plt.plot_on_demand_learning_countings_mpl(time_steps, learnings, plots_folder_re
 np.savetxt(folder_results + tag_smart + '/learnings.txt', learnings)
 np.savetxt(folder_results + tag_smart + '/time-smart.txt', timings_equilibrium_smart)
 np.savetxt(folder_results + tag_smart + '/time-transport.txt', timings_transport)
+#'''
 # --------------------------------------------------------------------------
 # Run reactive transport with the conventional algorithm
 # --------------------------------------------------------------------------
@@ -420,3 +428,4 @@ print("")
 step = 1
 plt.plot_computing_costs_mpl(time_steps, (timings_equilibrium_conv, timings_equilibrium_smart, timings_transport), step, plots_folder_results)
 plt.plot_speedups_mpl(time_steps, (timings_equilibrium_conv, timings_equilibrium_smart), step, plots_folder_results)
+#'''

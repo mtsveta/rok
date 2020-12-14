@@ -1,5 +1,6 @@
 import sys
-sys.path.insert(2, '/home/skyas/polybox/allanleal-cpp-reactivetransportsolver-demo/build/lib/python3.7/site-packages')
+sys.path.remove('/home/skyas/polybox/rok')
+sys.path.insert(1, '/home/skyas/polybox/allanleal-cpp-reactivetransportsolver-demo-restored/build/lib/python3.7/site-packages')
 import firedrake as fire
 import reaktoro as rkt
 import rok
@@ -41,8 +42,8 @@ method_transport = 'supg'
 #activity_model = "hkf-selected-species"
 #activity_model = "pitzer-full"
 #activity_model = "pitzer-selected-species"
-#activity_model = "dk-full"
-activity_model = "dk-selected-species"
+activity_model = "dk-full"
+#activity_model = "dk-selected-species"
 
 # --------------------------------------------------------------------------
 # Parameters for the ODML algorithm
@@ -65,7 +66,7 @@ tag_conv = "-" + activity_model + \
       "-nnodes-" + str(nnodes) + \
       "-nsteps-" + str(nsteps) + \
       "-conv"
-folder_results = 'results-23.04.20/demo-scavenging-heterogeneous-odml-localized'
+folder_results = 'results-new-sdhm-11.07.20/demo-scavenging-heterogeneous-odml-localized'
 
 # The seconds spent on equilibrium and transport calculations per time step
 time_steps = []
@@ -119,45 +120,32 @@ dhModel.setPHREEQC()
 
 editor = rkt.ChemicalEditor(db)
 
+selected_species = ['Ca(HCO3)+', 'CO3--', 'CaCO3(aq)', 'Ca++', 'CaSO4(aq)', 'CaOH+', 'Cl-',
+                            'FeCl++', 'FeCl2(aq)', 'FeCl+', 'Fe++', 'FeOH+', 'Fe+++', 'FeOH++', 
+                            'H2S(aq)', 'H2(aq)', 'HS-', 'H2O(l)', 'H+', 'OH-', 'HCO3-', 'HSO4-',
+                            'KSO4-',  'K+',
+                            'Mg++', 'Mg(HCO3)+', 'MgCO3(aq)', 'MgSO4(aq)', 'MgOH+',
+                            'Na+', 'NaSO4-',
+                            'O2(aq)',
+                            'S5--', 'S4--', 'S3--', 'S2--', 'SO4--']
 if activity_model == "pitzer-full":
     editor.addAqueousPhaseWithElements('C Ca Cl Fe H K Mg Na O S') \
         .setChemicalModelPitzerHMW() \
         .setActivityModelDrummondCO2()
 elif activity_model == "pitzer-selected-species":
     #editor.addAqueousPhase("H2O(l) H+ OH- Na+ Cl- Ca++ Mg++ HCO3- CO2(aq) CO3--") \
-    editor.addAqueousPhase(['Ca(HCO3)+', 'CO3--', 'CaCO3(aq)', 'Ca++', 'CaSO4(aq)', 'CaOH+', 'Cl-',
-                            'FeCl++', 'FeCl2(aq)', 'FeCl+', 'Fe++', 'FeOH+', 'Fe+++',
-                            'H2S(aq)', 'H2(aq)', 'HS-', 'H2O(l)', 'H+', 'OH-', 'HCO3-', 'HSO4-',
-                            'KSO4-',  'K+',
-                            'Mg++', 'Mg(HCO3)+', 'MgCO3(aq)', 'MgSO4(aq)', 'MgOH+',
-                            'Na+', 'NaSO4-',
-                            'O2(aq)',
-                            'S5--', 'S4--', 'S3--', 'S2--', 'SO4--']) \
+    editor.addAqueousPhase(selected_species) \
         .setChemicalModelPitzerHMW() \
         .setActivityModelDrummondCO2()
 elif activity_model == "hkf-full":
     editor.addAqueousPhaseWithElements('C Ca Cl Fe H K Mg Na O S')
 elif activity_model == "hkf-selected-species":
-    editor.addAqueousPhase(['Ca(HCO3)+', 'CO3--', 'CaCO3(aq)', 'Ca++', 'CaSO4(aq)', 'CaOH+', 'Cl-',
-                            'FeCl++', 'FeCl2(aq)', 'FeCl+', 'Fe++', 'FeOH+', 'Fe+++',
-                            'H2S(aq)', 'H2(aq)', 'HS-', 'H2O(l)', 'H+', 'OH-', 'HCO3-', 'HSO4-',
-                            'KSO4-',  'K+',
-                            'Mg++', 'Mg(HCO3)+', 'MgCO3(aq)', 'MgSO4(aq)', 'MgOH+',
-                            'Na+', 'NaSO4-',
-                            'O2(aq)',
-                            'S5--', 'S4--', 'S3--', 'S2--', 'SO4--'])
+    editor.addAqueousPhase(selected_species)
 elif activity_model == "dk-full":
     editor.addAqueousPhaseWithElements('C Ca Cl Fe H K Mg Na O S') \
         .setChemicalModelDebyeHuckel()
 elif activity_model == "dk-selected-species":
-    editor.addAqueousPhase(['Ca(HCO3)+', 'CO3--', 'CaCO3(aq)', 'Ca++', 'CaSO4(aq)', 'CaOH+', 'Cl-',
-                            'FeCl++', 'FeCl2(aq)', 'FeCl+', 'Fe++', 'FeOH+', 'Fe+++',
-                            'H2S(aq)', 'H2(aq)', 'HS-', 'H2O(l)', 'H+', 'OH-', 'HCO3-', 'HSO4-',
-                            'KSO4-',  'K+',
-                            'Mg++', 'Mg(HCO3)+', 'MgCO3(aq)', 'MgSO4(aq)', 'MgOH+',
-                            'Na+', 'NaSO4-',
-                            'O2(aq)',
-                            'S5--', 'S4--', 'S3--', 'S2--', 'SO4--']) \
+    editor.addAqueousPhase(selected_species) \
         .setChemicalModelDebyeHuckel(dhModel)
 
 editor.addMineralPhase('Pyrrhotite')
@@ -234,18 +222,18 @@ def run_transport(use_smart_equilibrium):
 
     pressures = flow.p.dat.data
 
-    state_ic = rkt.ChemicalState(system)
-    inv_solver = rkt.EquilibriumInverseSolver(system)
+    #state_ic = rkt.ChemicalState(system)
+    #inv_solver = rkt.EquilibriumInverseSolver(system)
 
-
-    bar = IncrementalBar('Initialization of the field with teh chemical states having different pressures:', max=ndofs)
+    print('Initialization of the field with teh chemical states having different pressures:')
+    #bar = IncrementalBar('Initialization of the field with teh chemical states having different pressures:', max=ndofs)
     for i in range(ndofs):
         # Set temperature and pressure of for the inverse problem
         problem_ic.setTemperature(T)
         problem_ic.setPressure(pressures[i])
         # Solve inverse problem
-        #state_ic = rkt.equilibrate(problem_ic)
-        inv_solver.solve(state_ic, problem_ic)
+        state_ic = rkt.equilibrate(problem_ic)
+        #inv_solver.solve(state_ic, problem_ic)
         # Scale the total volume and the aqueous phase of the volume (to specify the porosity)
         state_ic.scalePhaseVolume("Aqueous", 0.1, "m3")  # 10% porosity
         state_ic.scaleVolume(1.0, "m3")
@@ -253,9 +241,9 @@ def run_transport(use_smart_equilibrium):
         # Append inverse-equilibrated state
         states_ic.append(state_ic)
 
-        bar.next()
+        #bar.next()
 
-    bar.finish()
+    #bar.finish()
 
     field.fillStates(states_ic)
     field.update()
@@ -338,7 +326,12 @@ def run_transport(use_smart_equilibrium):
     if use_smart_equilibrium: bar = IncrementalBar('Reactive transport with the ODML algorithm:', max=nsteps)
     else: bar = IncrementalBar('Reactive transport with the conventional algorithm:', max=nsteps)
 
+    selected_steps = [100, 200, 400, 1000]
+
     while step < nsteps:
+
+        if step == any(selected_steps):
+            print('Progress at step {}: {:.2f} hours / {:.2f} days'.format(step, t / hour, t / day), flush=True)
 
         if step % 10 == 0:
             # For each selected species, output its molar amounts
@@ -410,7 +403,7 @@ np.savetxt(folder_results + tag_smart + '/time-transport.txt', timings_transport
 # --------------------------------------------------------------------------
 # Run reactive transport with the conventional algorithm
 # --------------------------------------------------------------------------
-
+#'''
 start_rt = time.time()
 
 use_smart_equilibrium = False
@@ -430,3 +423,4 @@ print("")
 step = 1
 plt.plot_computing_costs_mpl(time_steps, (timings_equilibrium_conv, timings_equilibrium_smart, timings_transport), step, plots_folder_results)
 plt.plot_speedups_mpl(time_steps, (timings_equilibrium_conv, timings_equilibrium_smart), step, plots_folder_results)
+#'''

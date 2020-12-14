@@ -1,5 +1,8 @@
 import sys
-sys.path.insert(2, '/home/skyas/polybox/allanleal-cpp-reactivetransportsolver-demo/build/lib/python3.7/site-packages')
+sys.path.remove('/home/skyas/polybox/rok')
+sys.path.insert(1, '/home/skyas/polybox/allanleal-cpp-reactivetransportsolver-demo-restored/build/lib/python3.7/site-packages')
+#print(sys.path)
+#input()
 import firedrake as fire
 import reaktoro as rkt
 import rok
@@ -21,6 +24,9 @@ D = fire.Constant(1.0e-9)  # the diffusion coefficient (in units of m2/s)
 cL = rok.Constant(1.0) # Dirichlet BC for the transport
 T = 60.0 + 273.15  # the temperature (in units of K)
 P = 100 * 1e5  # the pressure (in units of Pa)
+P_right = 0.9 * P #
+#P = 1e5 + 1000
+#P_right = 1e5
 
 # Discretization parameters for the reactive transport simulation
 lx = 1.6
@@ -38,9 +44,9 @@ method_transport = 'supg'
 
 # Activity model for the aqueous species
 
-activity_model = "hkf-full"
+#activity_model = "hkf-full"
 #activity_model = "hkf-selected-species"
-#activity_model = "pitzer-full"
+activity_model = "pitzer-full"
 #activity_model = "pitzer-selected-species"
 #activity_model = "dk-full"
 #activity_model = "dk-selected-species"
@@ -49,7 +55,11 @@ activity_model = "hkf-full"
 # Parameters for the ODML algorithm
 # --------------------------------------------------------------------------
 
-smart_equlibrium_reltol = 0.01
+smart_equlibrium_reltol = 0.001
+#smart_equlibrium_reltol = 0.005
+#smart_equlibrium_reltol = 0.001
+#smart_equlibrium_reltol = 0.0005
+
 amount_fraction_cutoff = 1e-14
 mole_fraction_cutoff = 1e-14
 
@@ -68,7 +78,8 @@ tag_conv = "-" + activity_model + \
       "-ncells-" + str((nx + 1)*(ny + 1)*(nz + 1)) + \
       "-nsteps-" + str(nsteps) + \
       "-conv"
-folder_results = 'results/demo-chemicaltransport-heterogeneous-odml'
+#folder_results = 'results-P-101000-with-res/demo-dolomitization-heterogeneous-odml'
+folder_results = 'results-P-100Pascal/demo-dolomitization-heterogeneous-odml'
 
 # The seconds spent on equilibrium and transport calculations per time step
 time_steps = []
@@ -86,6 +97,8 @@ def print_test_summary():
     print("ODML retol      :", smart_equlibrium_reltol)
     print("Number of DOFs  : {} = ({} + 1) x ({} + 1) x ({} + 1)".format((nx+1)*(ny+1)*(nz+1), nx, ny, nz))
     print("Number of steps :", nsteps)
+    print("Result folder   :", folder_results )
+    print("Smart tag       :", tag_smart)
 
 print_test_summary()
 
@@ -108,10 +121,9 @@ problem.setFluidDensity(rho)
 problem.setFluidViscosity(mu)
 problem.setRockPermeability(k)
 problem.setSourceRate(f)
-#problem.addPressureBC(1.1 * P, "left")
-#problem.addPressureBC(P, "right")
-problem.addPressureBC(1e5 + 1000, "left")
-problem.addPressureBC(1e5, "right")
+problem.addPressureBC(P, "left")
+#problem.addPressureBC(0.9 * P, "right")
+problem.addPressureBC(P_right, "right")
 problem.addVelocityComponentBC(rok.Constant(0.0), "y", "bottom")
 problem.addVelocityComponentBC(rok.Constant(0.0), "y", "top")
 
@@ -142,6 +154,8 @@ editor.addMineralPhase("Dolomite")
 
 # Initialise the chemical system
 system = rkt.ChemicalSystem(editor)
+#print(system)
+#input()
 
 # Define equilibrium options
 equilibrium_options = rkt.EquilibriumOptions()
@@ -158,8 +172,9 @@ rt_results = []
 
 # List of name of species and elements we track
 species_out = ["Ca++", "Mg++", "Calcite", "Dolomite", "CO2(aq)", "HCO3-", "Cl-", "H2O(l)"]
-elements_out = ["H", "O", "C", "Ca", "Mg", "Na", "Cl"]
-
+#elements_out = ["H", "O", "C", "Ca", "Mg", "Na", "Cl"]
+elements_out = ["C", "Ca", "Cl", "H", "Mg", "Na", "O", "Si", "Z"]
+#              [ 0 ,  1,     2,   3,   4,     5,    6,   7,   8]
 # List of functions representing species and elements we track
 n_out = [fire.Function(V, name=name) for name in species_out]
 b_out = [fire.Function(V, name=name) for name in elements_out]
@@ -269,8 +284,10 @@ def run_transport(use_smart_equilibrium):
     t = 0.0
     step = 0
 
-    if use_smart_equilibrium: bar = IncrementalBar('Reactive transport with the ODML algorithm:', max=nsteps)
-    else: bar = IncrementalBar('Reactive transport with the conventional algorithm:', max=nsteps)
+    #if use_smart_equilibrium: bar = IncrementalBar('Reactive transport with the ODML algorithm:', max=nsteps)
+    #else: bar = IncrementalBar('Reactive transport with the conventional algorithm:', max=nsteps)
+
+    selected_steps = [20, 500, 1500, 2500]
 
     while step < nsteps:
 
@@ -278,8 +295,8 @@ def run_transport(use_smart_equilibrium):
         #elapsed_time = (time.time() - start_time) / hour
         #final_time = elapsed_time * (tend / t - 1) if t != 0.0 else 0.0
 
-        #print('Progress at step {}: {:.2f} hour ({:.2f}% of {:.2f} days), elapsed time is {:.2f} hour (estimated to end in {:.2f} hours)'.format(
-        #        step, t / hour, t / tend * 100, tend / day, elapsed_time, final_time), flush=True)
+        if step in selected_steps:
+            print('Progress at step {}: {:.2f} minutes / {:.2f} hours / {:.2f} days'.format(step, t / minute, t / hour, t / day), flush=True)
 
         if step % 10 == 0:
             # For each selected species, output its molar amounts
@@ -321,8 +338,8 @@ def run_transport(use_smart_equilibrium):
         t += dt
 
         #print(f'Elapsed time in step {step}: {time.time() - time_step_start} seconds', flush=True)
-        bar.next()
-    bar.finish()
+        #bar.next()
+    #bar.finish()
     if use_smart_equilibrium:
         transport.equilibrium.outputClusterInfo()
 
@@ -351,7 +368,7 @@ np.savetxt(folder_results + tag_smart + '/time-transport.txt', timings_transport
 # --------------------------------------------------------------------------
 # Run reactive transport with the conventional algorithm
 # --------------------------------------------------------------------------
-
+#"""
 start_rt = time.time()
 
 use_smart_equilibrium = False
@@ -371,3 +388,4 @@ print("")
 step = 1
 plt.plot_computing_costs_mpl(time_steps, (timings_equilibrium_conv, timings_equilibrium_smart, timings_transport), step, plots_folder_results)
 plt.plot_speedups_mpl(time_steps, (timings_equilibrium_conv, timings_equilibrium_smart), step, plots_folder_results)
+#"""
