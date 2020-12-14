@@ -1,0 +1,15 @@
+python -c 'import reaktoro; print(reaktoro.__path__[0])'
+python -c 'import sys; print(sys.path)'
+
+['', '/home/skyas/polybox/rok', '/home/skyas/anaconda3/envs/rok/lib/python3.7/site-packages', '/home/skyas/work/rok', '/home/skyas/anaconda3/envs/rok/lib/python37.zip', '/home/skyas/anaconda3/envs/rok/lib/python3.7', '/home/skyas/anaconda3/envs/rok/lib/python3.7/lib-dynl
+oad', '/home/skyas/work/rok/firedrake/lib/python3.7/site-packages', '/home/skyas/work/rok/firedrake/src/h5py', '/home/skyas/work/rok/firedrake/src/loopy', '/home/skyas/work/rok/firedrake/src/COFFEE', '/home/skyas/work/rok/firedrake/src/ufl', '/home/skyas/work/rok/firedra
+ke/src/fiat', '/home/skyas/work/rok/firedrake/src/FInAT', '/home/skyas/work/rok/firedrake/src/tsfc', '/home/skyas/work/rok/firedrake/src/PyOP2', '/home/skyas/work/rok/firedrake/src/pyadjoint', '/home/skyas/work/rok/firedrake/src/firedrake']
+
+$ export PYTHONPATH=$PWD/build-new/lib/python3.7/site-packages
+$ python -c 'import reaktoro; print(reaktoro.__path__[0])'
+/home/skyas/polybox/allanleal-cpp-reactivetransportsolver-demo-restored/build-new/lib/python3.7/site-packages/reaktoro
+
+
+To activate both enviroments: . /home/skyas/work/rok/firedrake/bin/activate && conda activate rok
+
+
