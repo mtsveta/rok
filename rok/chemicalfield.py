@@ -64,6 +64,10 @@ class _ChemicalField(object):
         for k in range(self.num_dofs):
             self.states[k].assign(state)
 
+    def fillStates(self, states):
+        for k in range(self.num_dofs):
+            self.states[k].assign(states[k])
+
     def setTemperatures(self, temperatures):
         for k in range(self.num_dofs):
             self.states[k].setTemperature(temperatures[k])
@@ -145,6 +149,10 @@ class ChemicalField(object):
 
     def fill(self, state):
         self.pimpl.fill(state)
+
+    def fillStates(self, states):
+        self.pimpl.fillStates(states)
+
 
     def setTemperatures(self, temperatures):
         self.pimpl.setTemperatures(temperatures)
