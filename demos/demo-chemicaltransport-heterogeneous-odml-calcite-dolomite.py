@@ -1,6 +1,7 @@
 import sys
 sys.path.remove('/home/skyas/polybox/rok')
-sys.path.insert(1, '/home/skyas/polybox/allanleal-cpp-reactivetransportsolver-demo-restored/build/lib/python3.7/site-packages')
+#sys.path.insert(1, '/home/skyas/polybox/allanleal-cpp-reactivetransportsolver-demo-restored/build/lib/python3.7/site-packages')
+sys.path.insert(1, '/home/skyas/work/allanleal-cpp-reactivetransportsolver-demo/build/lib/python3.7/site-packages')
 #print(sys.path)
 #input()
 import firedrake as fire
@@ -44,9 +45,9 @@ method_transport = 'supg'
 
 # Activity model for the aqueous species
 
-#activity_model = "hkf-full"
+activity_model = "hkf-full"
 #activity_model = "hkf-selected-species"
-activity_model = "pitzer-full"
+#activity_model = "pitzer-full"
 #activity_model = "pitzer-selected-species"
 #activity_model = "dk-full"
 #activity_model = "dk-selected-species"
@@ -79,7 +80,8 @@ tag_conv = "-" + activity_model + \
       "-nsteps-" + str(nsteps) + \
       "-conv"
 #folder_results = 'results-P-101000-with-res/demo-dolomitization-heterogeneous-odml'
-folder_results = 'results-P-100Pascal/demo-dolomitization-heterogeneous-odml'
+#folder_results = 'results-P-100bar/demo-dolomitization-heterogeneous-odml'
+folder_results = 'results-mass-imbalance-tests/demo-dolomitization-heterogeneous-odml'
 
 # The seconds spent on equilibrium and transport calculations per time step
 time_steps = []
@@ -104,7 +106,18 @@ print_test_summary()
 
 # Initialise the mesh
 mesh = fire.RectangleMesh(nx, ny, lx, ly, quadrilateral=True)
+x_coords = mesh.coordinates.dat.data[:, 0]
+y_coords = mesh.coordinates.dat.data[:, 1]
+mesh_coords = mesh.coordinates
+#mesh_mapping = mesh.mapping
+
+print(f"x of size {len(x_coords)} = ", x_coords)
+print(f"y of size {len(y_coords)} = ", y_coords)
+print(f"mesh_coords = ", mesh_coords)
+
 V = fire.FunctionSpace(mesh, "CG", 1)
+V0 = fire.FunctionSpace(mesh, "DG", 0)
+p0 = fire.Function(V0)
 ndofs = V.dof_count
 x, y = rok.SpatialCoordinate(mesh)
 
@@ -122,7 +135,6 @@ problem.setFluidViscosity(mu)
 problem.setRockPermeability(k)
 problem.setSourceRate(f)
 problem.addPressureBC(P, "left")
-#problem.addPressureBC(0.9 * P, "right")
 problem.addPressureBC(P_right, "right")
 problem.addVelocityComponentBC(rok.Constant(0.0), "y", "bottom")
 problem.addVelocityComponentBC(rok.Constant(0.0), "y", "top")
@@ -137,7 +149,6 @@ if activity_model == "pitzer-full":
         .setChemicalModelPitzerHMW() \
         .setActivityModelDrummondCO2()
 elif activity_model == "pitzer-selected-species":
-    #editor.addAqueousPhase("H2O(l) H+ OH- Na+ Cl- Ca++ Mg++ HCO3- CO2(aq) CO3--") \
     editor.addAqueousPhase("H2O(l) H+ OH- Na+ Cl- Ca++ Mg++ HCO3- CO2(aq) CO3-- CaCl+ Ca(HCO3)+ MgCl+ Mg(HCO3)+") \
         .setChemicalModelPitzerHMW() \
         .setActivityModelDrummondCO2()
@@ -240,6 +251,27 @@ def run_transport(use_smart_equilibrium):
     field.update()
 
     # Set the pressure field to the chemical field
+    pressures = np.zeros(ndofs)
+    for i, x, y in zip(np.linspace(0, ndofs-1, num=ndofs, dtype=int), x_coords, y_coords):
+        pressures[i] = flow.p.at([x, y])
+        if pressures[i] < 0:
+            print(f"{i}: p({x}, {y}) = {pressures[i]}")
+
+    print("pressures = ", pressures)
+    print("len(pressures) = ", len(pressures))
+    print("max(pressures) = ", max(pressures))
+    print("min(pressures) = ", min(pressures))
+
+    print("flow.p =", flow.p)
+    print("flow.p.vector()[:] =", flow.p.vector()[:])
+    print("len(flow.p.vector()[:]) =", len(flow.p.vector()[:]))
+    print(p0.project(flow.p))
+    print("p0 =", p0.dat.data)
+    print("len(p0) =", len(p0.dat.data))
+    print("max(p0) =", max(p0.dat.data))
+    print("min(p0) =", min(p0.dat.data))
+
+
     field.setPressures(flow.p.dat.data) # TODO: should not pressure be sync w.r.t. to the pressure found in the Darcy?
 
     # Initialize the chemical transport options
@@ -273,9 +305,14 @@ def run_transport(use_smart_equilibrium):
 
     # Outputting the results
     print('max(u) = ', np.max(flow.u.dat.data[:, 0]), flush=True)
+    print('max(P) = ', np.max(flow.p.dat.data), flush=True)
+    print('min(P) = ', np.min(flow.p.dat.data), flush=True)
+    print('max(P[0:ndofs]) = ', np.max(flow.p.dat.data[0:ndofs]), flush=True)
+    print('min(P[0:ndofs]) = ', np.min(flow.p.dat.data[0:ndofs]), flush=True)
     print('max(k) = ', np.max(k.dat.data), flush=True)
     print('div(u)*dx =', rok.assemble(rok.div(flow.u) * rok.dx), flush=True)
     print('dt = {} minute'.format(dt / minute), flush=True)
+    input()
 
     # Create the output files in the folders corresponding to the selected method
     file_species_amounts, file_element_amounts, file_porosity, file_volume, file_ph \
