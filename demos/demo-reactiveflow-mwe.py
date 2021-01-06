@@ -21,7 +21,8 @@ year = 365 * day
 D = rok.Constant(1.0e-9)  # the diffusion coefficient (in units of m2/s)
 T = 60.0 + 273.15  # the temperature (in units of K)
 P_left = 100 * 1e5  # the pressure (in units of Pa) on the left boundary
-P_right = 1e-4 * P_left # the pressure on the right boundary #TODO: for {1e-1, 1e-2, 1e-3} * P the pressure remains positive
+P_right = 1e-1 * P_left # the pressure on the right boundary
+#P_right = 1e-4 * P_left # the pressure on the right boundary #TODO: for {1e-1, 1e-2, 1e-3} * P the pressure remains positive
 P = P_left
 
 # Discretization parameters for the reactive transport simulation
@@ -46,8 +47,8 @@ resultsdir = f"results/demo-reactiveflow-mwe/mesh-{nx}x{ny}-cfl-{cfl}-flow-{meth
 mesh = rok.RectangleMesh(nx, ny, lx, ly, quadrilateral=True)
 x_coords = mesh.coordinates.dat.data[:, 0]
 y_coords = mesh.coordinates.dat.data[:, 1]
-print(f"x of size {len(x_coords)} = ", x_coords)
-print(f"y of size {len(y_coords)} = ", y_coords)
+print(f"x of size {len(x_coords)} =", x_coords)
+print(f"y of size {len(y_coords)} =", y_coords)
 
 # Initialize the function spaces
 V = rok.FunctionSpace(mesh, "CG", 1)
@@ -80,12 +81,15 @@ flow = rok.DarcySolver(problem, method=method_flow)
 flow.solve()
 rok.File(resultsdir + "flow.pvd").write(flow.u, flow.p, k)
 
-print("flow.p.dat.data =", flow.p.dat.data)
 print("len(flow.p.dat.data) =", len(flow.p.dat.data))
-print('max(P) = ', np.max(flow.p.dat.data), flush=True)
-print('min(P) = ', np.min(flow.p.dat.data), flush=True)
-print('max(P[0:ndofs]) = ', np.max(flow.p.dat.data[0:ndofs]), flush=True)
-print('min(P[0:ndofs]) = ', np.min(flow.p.dat.data[0:ndofs]), flush=True)
+print('max(P[0:ndofs]) =', np.max(flow.p.dat.data[0:ndofs]), flush=True)
+print('min(P[0:ndofs]) =', np.min(flow.p.dat.data[0:ndofs]), flush=True)
+print('max(P) =', np.max(flow.p.dat.data), flush=True)
+print('min(P) =', np.min(flow.p.dat.data), flush=True)
+print('P_left  =', P_left)
+print('P_right =', P_right)
+print('max(P) < P_left  :', np.max(flow.p.dat.data) < P_left)
+print('min(P) > P_right :', np.min(flow.p.dat.data) > P_right)
 
 # -------------------------------------------------------------------------------------------------------------------- #
 # Chemical problem
@@ -151,9 +155,13 @@ for i, x, y in zip(np.linspace(0, ndofs-1, num=ndofs, dtype=int), x_coords, y_co
     if pressures[i] < 0:
         print(f"{i}: p({x}, {y}) = {pressures[i]}")
 
-print("len(pressures) = ", len(pressures))
-print("max(pressures) = ", max(pressures))
-print("min(pressures) = ", min(pressures))
+print("len(pressures) =", len(pressures))
+print("max(pressures) =", max(pressures))
+print("min(pressures) =", min(pressures))
+print('P_left  =', P_left)
+print('P_right =', P_right)
+print('max(pressures) < P_left  :', np.max(pressures) < P_left)
+print('min(pressures) > P_right :', np.min(pressures) > P_right)
 
 # # Auxiliary function space
 # V0 = fire.FunctionSpace(mesh, "DG", 1)
