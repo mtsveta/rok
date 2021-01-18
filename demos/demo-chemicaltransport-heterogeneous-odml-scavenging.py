@@ -30,7 +30,7 @@ P = P_left
 # Parameters for the reactive transport simulation
 lx = 100
 ly = 30
-nx = 100  # the number of mesh cells along the x-coordinate
+nx = 150  # the number of mesh cells along the x-coordinate
 ny = 120  # the number of mesh cells along the y-coordinate
 nsteps = 1000  # the number of time steps
 cfl = 0.3     # the CFL number to be used in the calculation of time step

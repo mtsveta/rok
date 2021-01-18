@@ -388,6 +388,8 @@ class ChemicalTransportSolver(object):
 
         # self.equilibrium.setOptions(options)
 
+        P_first = states[0].pressure()
+
         # Compute the equilibrium states
         for k in range(self.num_dofs):
 
@@ -395,8 +397,40 @@ class ChemicalTransportSolver(object):
             T = states[k].temperature()
             P = states[k].pressure()
 
+            be_before = self.be[:, k]
+            #print("Before b       :", be_before)
+            #print("Before n       :", states[k].speciesAmounts())
+
             # Perform the equilibrium calculation at current degree of freedom
             result = self.equilibrium.solve(states[k], T, P, self.be[:, k])
+
+            be_after = states[k].elementAmounts()
+            p_ratio = np.divide(be_after[0:-1], be_before[0:-1])
+            p_error =  np.divide(np.abs(be_after[0:-1] - be_before[0:-1]), be_before[0:-1])
+            p_abs_error = np.abs(be_after[0:-1] - be_before[0:-1])
+            #if np.any(abs(p_ratio - 1.0) >= 1e-6):
+            if np.any(p_abs_error >= 1e-6):
+                print("DOF            :", k)
+                print("P ratio        :", P_first / P)
+                #print("Ratio in/out b :", p_ratio)
+                print("Smart accepted :", result.estimate.accepted)
+
+                index = np.where(abs(p_ratio - 1.0) >= 1e-6)
+                for indx in index[0]:
+                    print(f"{self.system.element(indx).name()}: "
+                          f"in amount {be_before[indx]}, "
+                          f"out amount {be_after[indx]}, "
+                          f"ratio {p_ratio[indx]}, "
+                          f"error {p_error[indx]}, "
+                          f"abs_error {p_abs_error[indx]}")
+
+            #print("After b        :", be_after)
+            #print("After n        :", states[k].speciesAmounts())
+            # print("DOF            :", k)
+            # print("P ratio        :", P_first / P)
+            # print("Ratio in/out b :", p_ratio)
+            # print("Smart accepted :", result.estimate.accepted)
+            # input()
 
             if self.options.use_smart_equilibrium:
                 # Check if the smart equilibrium calculation was successful
@@ -453,6 +487,25 @@ class ChemicalTransportSolver(object):
                 iterations[k] = result.optimum.iterations
             seconds[k] = result.timing.solve
 
+            """
+            # Print residuals in the mass-balance equation
+            if self.steps == 1 or self.steps == 10 or self.steps == 20 or self.steps == 40 or self.steps == 50 or \
+                    self.steps == 80 or self.steps == 150 or self.steps == 250:
+                Ae = self.partition.formulaMatrixEquilibriumPartition()
+                ies = self.partition.indicesEquilibriumSpecies()
+                n = states[k].speciesAmounts()
+                ne = n[ies]
+                res_array[k, :] = abs(np.dot(Ae, ne) - self.be[:, k])
+
+            """
+        """
+        if self.steps == 1 or self.steps == 10 or self.steps == 20 or self.steps == 40 or self.steps == 50 or \
+                self.steps == 80 or self.steps == 150 or self.steps == 250:
+            np.savetxt(f'res-{self.steps}.txt', res_array)
+            print(f'res-{self.steps}.txt saved')
+        
+            #input()
+        """
         # Update the element amounts in the fluid phases of the equilibrium-fluid partition
         for i in range(self.num_fluid_phases):
             field.elementAmountsInSpecies(self.ispecies_ef[i], self.bef[i])
@@ -469,6 +522,7 @@ class ChemicalTransportSolver(object):
 
         # Total time spent on performing equilibrium calculations
         self.result.seconds_equilibrium = timer.time() - tbegin
+
 
     def react(self, field, dt):
         pass
@@ -490,6 +544,11 @@ class ChemicalTransportSolver(object):
         # Stop timing the transport time of the reactive transport
         self.result.seconds = timer.time() - tbegin
 
+        # print("Before equilibrate:")
+        # for name in ["H", "O", "C", "Ca", "Mg", "Na", "Cl"]:
+        #     print(f"{name}: ", field.elementAmountInPhase(name, "Aqueous").dat.data)
+        # input()
+
         # Equilibrate the equilibrium-solid and equilibrium-fluid partitions
         self.equilibrate(field)
 
@@ -498,6 +557,11 @@ class ChemicalTransportSolver(object):
 
         # Update the porosity and fluid phases saturation fields
         field.update()
+
+        # print("After equilibrate:")
+        # for name in ["H", "O", "C", "Ca", "Mg", "Na", "Cl"]:
+        #     print(f"{name}: ", field.elementAmountInPhase(name, "Aqueous").dat.data)
+        # input()
 
         # Compute the time elapsed for the chemical transport step
         self.result.time = timer.time() - tbegin
